@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include<SDL2/SDL.h>
-
+#include<SDL2/SDL_ttf.h>
 
 class Interface {
     private:
@@ -18,10 +18,12 @@ class Interface {
         SDL_Window* window;
         SDL_Renderer* renderer;
         SDL_Event event;
+
+        TTF_Font* font;
         
 
     public:
-        Interface(int width, int height, int FPS);
+        Interface();
         ~Interface();
 
         void init();
