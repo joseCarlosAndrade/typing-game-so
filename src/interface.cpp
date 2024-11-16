@@ -2,9 +2,9 @@
 #include <SDL2/SDL_ttf.h>
 
 Interface::Interface()
-    : FPS(60), running(false), stopWindow(false), window(nullptr), renderer(nullptr) {
+    : FPS(60), running(false), stopWindow(false), window(nullptr), renderer(nullptr), font(nullptr), fontsize(FONT_SIZE) {
 
-       
+    //    keyboard = Keyboard(100, 100, 10, 24);
     }
 
 Interface::~Interface() {
@@ -21,6 +21,8 @@ void Interface::init() {
     SDL_GetCurrentDisplayMode(0, &DM);
     width = DM.w * 0.8;
     height = DM.h * 0.8;
+
+    keyboard = new Keyboard(width, height, FONT_SPACING, FONT_SIZE);
 
     std::cout << "Width: " << width << " Height: " << height << std::endl;
 
@@ -42,7 +44,7 @@ void Interface::init() {
     }
 
     // load font
-    font = TTF_OpenFont("assets/arial.ttf", 24);
+    font = TTF_OpenFont("assets/arial.ttf", fontsize);
 
     running = true;
 }
@@ -58,19 +60,15 @@ void Interface::render() {
     // Render game objects here
     
     // write text to screen
-    SDL_Color color = {255, 255, 255, 255};
-    
-    SDL_Surface* surface = TTF_RenderText_Solid(font, "Hello, World!", color);
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_Rect textRect;
-    textRect.x = width/2;
-    textRect.y = height/2;
-    textRect.w = surface->w;
-    textRect.h = surface->h;
-    SDL_FreeSurface(surface);
-    SDL_RenderCopy(renderer, texture, NULL, &textRect);
-    SDL_DestroyTexture(texture);
+    // draw_letter_to_screen(100, 100, 'A');
 
+    auto positioned_text = keyboard->get_positioned_text();
+
+    // iterate though the positioned text and draw it to the screen 
+    for (; !positioned_text.empty(); positioned_text.pop_front()) {
+        PositionedLetter pl = positioned_text.front();
+        draw_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first);
+    }
 
     SDL_RenderPresent(renderer);
 }
@@ -83,7 +81,23 @@ void Interface::handleEvents() {
         }
 
         if (event.type == SDL_KEYDOWN) {
-            std::cout << "Key pressed: " << SDL_GetKeyName(event.key.keysym.sym) << std::endl;
+            SDL_Keycode key = event.key.keysym.sym;
+
+            std::cout << "Key pressed: " << SDL_GetKeyName(event.key.keysym.sym) << " NUMBER: " << key << std::endl;
+            if (key== SDLK_ESCAPE) {
+                running = false;
+
+            } else if (key >= SDLK_a && key <= SDLK_z) {
+                char letter = key - SDLK_a + 'A'; // convert to uppercase
+                keyboard->insert_letter(letter);
+
+            } else if (key == SDLK_BACKSPACE) {
+                keyboard->delete_letter();
+
+            } else if (key == SDLK_SPACE) {
+                keyboard->insert_letter(' ');
+            }
+            
         }
         // Handle other events here
     }
@@ -117,9 +131,7 @@ void Interface::setRunning(bool running) {
     this->running = running;
 }
 
-void Interface::setFPS(int FPS) {
-    this->FPS = FPS;
-}
+
 
 int Interface::getFPS() {
     return FPS;
@@ -143,4 +155,28 @@ SDL_Event* Interface::getEvent() {
 
 SDL_Window* Interface::getWindow() {
     return window;
+}
+
+int Interface::draw_letter_to_screen(int x, int y, char letter) {
+    // we dont need to init / clear / render anything, since this function will be called inside render()
+
+    SDL_Color color = {255, 255, 255, 255};
+    
+    // conver char to char *
+    char str[2];
+    str[0] = letter;
+    str[1] = '\0';
+
+    SDL_Surface* surface = TTF_RenderText_Solid(font, str, color);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Rect textRect;
+    textRect.x = x;
+    textRect.y = y;
+    textRect.w = surface->w;
+    textRect.h = surface->h;
+    SDL_FreeSurface(surface);
+    SDL_RenderCopy(renderer, texture, NULL, &textRect);
+    SDL_DestroyTexture(texture);
+
+    return 0;
 }

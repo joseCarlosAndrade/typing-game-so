@@ -4,6 +4,10 @@
 #include <iostream>
 #include<SDL2/SDL.h>
 #include<SDL2/SDL_ttf.h>
+#include"keyboard.hpp"
+
+#define FONT_SIZE 24
+#define FONT_SPACING 5
 
 class Interface {
     private:
@@ -20,7 +24,9 @@ class Interface {
         SDL_Event event;
 
         TTF_Font* font;
+        int fontsize;
         
+        Keyboard *keyboard;
 
     public:
         Interface();
@@ -36,13 +42,15 @@ class Interface {
         bool stop();
         void setStop(bool stop);
         void setRunning(bool running);
-        void setFPS(int FPS);
         int getFPS();
         int getWidth();
         int getHeight();
         SDL_Renderer* getRenderer();
         SDL_Event* getEvent();
         SDL_Window* getWindow();
+
+        // text handling
+        int draw_letter_to_screen(int x, int y, char letter);
 
 };
 
