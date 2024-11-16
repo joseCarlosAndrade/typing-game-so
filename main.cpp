@@ -3,7 +3,7 @@
 
 
 int main() {
-    Interface interface(800, 600, 60);
+    Interface interface = Interface();
     interface.init();
 
     while (interface.isRunning()) {

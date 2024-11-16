@@ -1,5 +1,5 @@
 CPP_FLAGS=-ggdb -Wall -Werror -Wextra -Iinclude
-SDL_FLAGS=-lSDL2
+SDL_FLAGS=-lSDL2 -lSDL2_ttf
 
 # main cpp + all .o files
 all: bin/main.o bin/interface.o
