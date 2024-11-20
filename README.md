@@ -24,7 +24,20 @@ Players compete by typing words or sentences as quickly and accurately as possib
 
 This project not only demonstrates the practical use of semaphores and threads but also provides an engaging platform for learning and exploring concurrent programming principles.
 
-## Running the game 
+## Running the server
+
+To run the server, simply go to the server directory and use make:
+
+```bash
+cd server
+```
+
+```bash
+make all
+make run
+```
+
+## Running the interface 
 
 Install SDL2 in your computer. I'm using `#include<SDL2/SDL.h>`, so if you have a linux you're probably ok. If not, let me know so we can configure OS specific import. If you use windows os, I don't care about you.
 
@@ -37,8 +50,8 @@ sudo apt install libsdl2-ttf-dev
 ```
 
 ```bash
-    make all
-    make run
+make all
+make run
 ```
 
 And you should be able to see a little window popping up!

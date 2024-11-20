@@ -5,7 +5,7 @@ Interface::Interface()
     : FPS(60), running(false), stopWindow(false), window(nullptr), renderer(nullptr), font(nullptr), fontsize(FONT_SIZE) {
 
     //    keyboard = Keyboard(100, 100, 10, 24);
-    }
+}
 
 Interface::~Interface() {
     clean();
@@ -58,13 +58,13 @@ void Interface::render() {
     SDL_RenderClear(renderer);
 
     // Render game objects here
-    
+
     // write text to screen
     // draw_letter_to_screen(100, 100, 'A');
 
     auto positioned_text = keyboard->get_positioned_text();
 
-    // iterate though the positioned text and draw it to the screen 
+    // iterate though the positioned text and draw it to the screen
     for (; !positioned_text.empty(); positioned_text.pop_front()) {
         PositionedLetter pl = positioned_text.front();
         draw_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first);
@@ -84,20 +84,16 @@ void Interface::handleEvents() {
             SDL_Keycode key = event.key.keysym.sym;
 
             std::cout << "Key pressed: " << SDL_GetKeyName(event.key.keysym.sym) << " NUMBER: " << key << std::endl;
-            if (key== SDLK_ESCAPE) {
+            if (key == SDLK_ESCAPE) {
                 running = false;
-
             } else if (key >= SDLK_a && key <= SDLK_z) {
                 char letter = key - SDLK_a + 'A'; // convert to uppercase
                 keyboard->insert_letter(letter);
-
             } else if (key == SDLK_BACKSPACE) {
                 keyboard->delete_letter();
-
             } else if (key == SDLK_SPACE) {
                 keyboard->insert_letter(' ');
             }
-            
         }
         // Handle other events here
     }
@@ -131,8 +127,6 @@ void Interface::setRunning(bool running) {
     this->running = running;
 }
 
-
-
 int Interface::getFPS() {
     return FPS;
 }
@@ -145,15 +139,15 @@ int Interface::getHeight() {
     return height;
 }
 
-SDL_Renderer* Interface::getRenderer() {
+SDL_Renderer *Interface::getRenderer() {
     return renderer;
 }
 
-SDL_Event* Interface::getEvent() {
+SDL_Event *Interface::getEvent() {
     return &event;
 }
 
-SDL_Window* Interface::getWindow() {
+SDL_Window *Interface::getWindow() {
     return window;
 }
 
@@ -161,14 +155,14 @@ int Interface::draw_letter_to_screen(int x, int y, char letter) {
     // we dont need to init / clear / render anything, since this function will be called inside render()
 
     SDL_Color color = {255, 255, 255, 255};
-    
+
     // conver char to char *
     char str[2];
     str[0] = letter;
     str[1] = '\0';
 
-    SDL_Surface* surface = TTF_RenderText_Solid(font, str, color);
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Surface *surface = TTF_RenderText_Solid(font, str, color);
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_Rect textRect;
     textRect.x = x;
     textRect.y = y;
