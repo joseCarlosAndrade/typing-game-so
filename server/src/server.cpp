@@ -70,9 +70,12 @@ void Server::stop() {
 // Handle a single player
 void Server::handlePlayer(int clientSocket, int playerId) {
     char buffer[1024];
+    
 
     while (isRunning) {
         memset(buffer, 0, sizeof(buffer));
+
+        // constantly tries to receive data from client until it disconnects
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 
         if (bytesReceived <= 0) {
