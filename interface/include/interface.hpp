@@ -51,6 +51,13 @@ class Interface {
 
         // text handling
         int draw_letter_to_screen(int x, int y, char letter);
+        int draw_phrase_to_screen(int x, int y, char letter);
+        int draw_wrong_letter_to_screen(int x, int y, char letter);
+
+
+        void renderPhrase(std::string phrase);
+        void setPhrase(std::string phrase);
+        void renderTypedText(std::string phrase);
 
 };
 

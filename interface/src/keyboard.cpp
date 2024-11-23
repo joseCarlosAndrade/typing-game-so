@@ -3,6 +3,7 @@
 Keyboard::Keyboard( int maxWidh, int maxHeight, int font_spacing , int font_size) 
     : maxWidth(maxWidh), maxHeight(maxHeight), font_spacing(font_spacing), font_size(font_size) {
     phrase = "";
+    last_index = 0;
 }
 
 Keyboard::~Keyboard() {
@@ -12,6 +13,7 @@ Keyboard::~Keyboard() {
 
 void Keyboard::setPhrase(std::string phrase) {
     this->phrase = phrase;
+    std::transform(this->phrase.begin(), this->phrase.end(), this->phrase.begin(), ::toupper);
 }
 
 std::string Keyboard::get_phrase() {
@@ -22,6 +24,8 @@ void Keyboard::insert_letter(char letter) {
     // typed_text.push(letter);
     PositionedLetter pl;
     pl.first = letter;
+    pl.second.index = last_index;
+    last_index++;
 
     // if empty, just isnert at 0,0
     if (index_positioned_text.empty()) {
@@ -56,7 +60,7 @@ void Keyboard::delete_letter() {
 
     if (!index_positioned_text.empty()) {
         index_positioned_text.pop_back();
-        
+        last_index--;
     }
 }
 
