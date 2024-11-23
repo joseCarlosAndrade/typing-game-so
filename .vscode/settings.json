@@ -62,6 +62,15 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "bit": "cpp",
-        "forward_list": "cpp"
+        "forward_list": "cpp",
+        "unordered_set": "cpp",
+        "format": "cpp",
+        "generator": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "stacktrace": "cpp",
+        "text_encoding": "cpp",
+        "regex": "cpp",
+        "valarray": "cpp"
     }
 }

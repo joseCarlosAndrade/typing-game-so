@@ -7,6 +7,7 @@
 typedef struct {
     int x;
     int y;
+    int index; // index of this letter in the whole string typed
 } PositionIndex;
 
 typedef std::pair<char, PositionIndex> PositionedLetter;
@@ -32,6 +33,9 @@ class Keyboard{
         // space between letters. This is used to calculate the width of the text
         int font_spacing; 
         int font_size;
+
+        // index of the last typed letter
+        int last_index;
 
     public:
         Keyboard(int maxWidth, int maxHeight, int font_spacing, int font_size);
