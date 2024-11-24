@@ -9,6 +9,13 @@
 #define FONT_SIZE 24
 #define FONT_SPACING 5
 
+typedef struct {
+    SDL_Color color;
+    int position_index;
+} Player;
+
+typedef std::vector<Player> vp;
+
 class Interface {
     private:
         
@@ -18,6 +25,9 @@ class Interface {
 
         // loop variables
         bool running, stopWindow;
+
+        // Players that joined in this game
+        vp players;
 
         SDL_Window* window;
         SDL_Renderer* renderer;
@@ -32,7 +42,7 @@ class Interface {
         Interface();
         ~Interface();
 
-        void init();
+        void init(std::string phrase);
         void update();
         void render();
         void handleEvents();
@@ -50,14 +60,16 @@ class Interface {
         SDL_Window* getWindow();
 
         // text handling
-        int draw_letter_to_screen(int x, int y, char letter);
-        int draw_phrase_to_screen(int x, int y, char letter);
+        int draw_correct_letter_to_screen(int x, int y, char letter);
+        int draw_phrase_letter_to_screen(int x, int y, char letter);
         int draw_wrong_letter_to_screen(int x, int y, char letter);
+        int draw_player_position(int x, int y, SDL_Color color);
 
 
         void renderPhrase(std::string phrase);
         void setPhrase(std::string phrase);
         void renderTypedText(std::string phrase);
+        void renderPlayerPosition(Player * player);
 
 };
 

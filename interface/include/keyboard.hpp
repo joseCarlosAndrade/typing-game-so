@@ -60,6 +60,8 @@ class Keyboard{
         std::string get_phrase();
 
         PositionedText get_positioned_text();
+
+        int get_last_index();
 };
 
 #endif

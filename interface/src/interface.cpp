@@ -3,7 +3,7 @@
 
 Interface::Interface()
     : FPS(60), running(false), stopWindow(false), window(nullptr), renderer(nullptr), font(nullptr), fontsize(FONT_SIZE) {
-
+    
     //    keyboard = Keyboard(100, 100, 10, 24);
 }
 
@@ -11,7 +11,7 @@ Interface::~Interface() {
     clean();
 }
 
-void Interface::init() {
+void Interface::init(std::string phrase) {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         std::cerr << "SDL Initialization failed: " << SDL_GetError() << std::endl;
         return;
@@ -46,13 +46,23 @@ void Interface::init() {
     // load font
     font = TTF_OpenFont("assets/arial.ttf", fontsize);
 
-    setPhrase("teste testando");
+
+    // add myplayer to the interface vector of players
+    Player myplayer;
+    SDL_Color c = {255, 255, 255, 255};
+    myplayer.position_index = keyboard->get_last_index();
+    myplayer.color = c;
+    players.push_back(myplayer);
+
+
+    setPhrase(phrase);
 
     running = true;
 }
 
 void Interface::update() {
     // Update game logic here
+    // will add players to the vector or remove
 }
 
 void Interface::render() {
@@ -62,11 +72,15 @@ void Interface::render() {
     // Render game objects here
 
     // write text to screen
-    // draw_letter_to_screen(100, 100, 'A');
+    // draw_correct_letter_to_screen(100, 100, 'A');
     std::string phrase = keyboard->get_phrase();
 
     renderPhrase(phrase);
     renderTypedText(phrase);
+    
+    for (int i = 0; i < int(players.size()); i++){
+        renderPlayerPosition(&players[i]);
+    }
 
 
     SDL_RenderPresent(renderer);
@@ -155,7 +169,7 @@ SDL_Window *Interface::getWindow() {
     return window;
 }
 
-int Interface::draw_letter_to_screen(int x, int y, char letter) {
+int Interface::draw_correct_letter_to_screen(int x, int y, char letter) {
     // we dont need to init / clear / render anything, since this function will be called inside render()
 
     SDL_Color color = {255, 255, 255, 255};
@@ -179,7 +193,7 @@ int Interface::draw_letter_to_screen(int x, int y, char letter) {
     return 0;
 }
 
-int Interface::draw_phrase_to_screen(int x, int y, char letter){
+int Interface::draw_phrase_letter_to_screen(int x, int y, char letter){
     SDL_Color color = {255, 255, 255, 100};
 
     // conver char to char *
@@ -228,6 +242,26 @@ int Interface::draw_wrong_letter_to_screen(int x, int y, char letter) {
     return 0;
 }
 
+int Interface::draw_player_position(int x, int y, SDL_Color color){
+        // conver char to char *
+    char str[2];
+    str[0] = '_';
+    str[1] = '\0';
+
+    SDL_Surface *surface = TTF_RenderText_Solid(font, str, color);
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Rect textRect;
+    textRect.x = x;
+    textRect.y = y;
+    textRect.w = surface->w;
+    textRect.h = surface->h;
+    SDL_FreeSurface(surface);
+    SDL_RenderCopy(renderer, texture, NULL, &textRect);
+    SDL_DestroyTexture(texture);
+
+    return 0;
+}
+
 void Interface::setPhrase(std::string phrase){
     keyboard->setPhrase(phrase);
 }
@@ -240,7 +274,7 @@ void Interface::renderPhrase(std::string phrase){
         x = pos_index % (width - (fontsize + FONT_SPACING));
         y = pos_index / (width - (fontsize + FONT_SPACING));
         
-        draw_phrase_to_screen(x, y*(fontsize + FONT_SPACING), keyboard->get_phrase()[i]);
+        draw_phrase_letter_to_screen(x, y*(fontsize + FONT_SPACING), keyboard->get_phrase()[i]);
     }
 }
 
@@ -250,19 +284,30 @@ void Interface::renderTypedText(std::string phrase){
     for (; !positioned_text.empty(); positioned_text.pop_front()) {
         PositionedLetter pl = positioned_text.front();
 
-        // case the text typed is yet smaller than the initial phrase
-        if (pl.second.x <= int(phrase.size()-1)){
-            if (pl.first == phrase[pl.second.index]){
-                draw_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first);
+        // case the current letter position is in the bounds of the initial phrase
+        if (pl.second.index <= int(phrase.size()-1)){
 
+            // if the typed letter is equals to the phrase letter
+            if (pl.first == phrase[pl.second.index]){
+                draw_correct_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first);
             }
             else
                 draw_wrong_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), phrase[pl.second.index]);
         }
         
-        // case the text typed is bigger than the initial phrase
+        // case the current letter postition is above than the actual phrase size
         else {
             draw_wrong_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first);
         }
     }
+}
+
+void Interface::renderPlayerPosition(Player * player){
+    int aux = keyboard->get_last_index()*(fontsize + FONT_SPACING);
+    int x, y;
+
+    x = aux % (width - (fontsize + FONT_SPACING));
+    y = aux / (width - (fontsize + FONT_SPACING));
+
+    draw_player_position(x, y*(fontsize + FONT_SPACING), player->color);
 }

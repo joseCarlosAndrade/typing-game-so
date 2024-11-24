@@ -13,7 +13,7 @@ int main() {
     }
 
     Interface interface = Interface();
-    interface.init();
+    interface.init("testetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetest");
 
     while (interface.isRunning()) {
         interface.handleEvents();
