@@ -68,6 +68,10 @@ PositionedText Keyboard::get_positioned_text() {
     return index_positioned_text;
 }
 
+int Keyboard::get_last_index() {
+    return last_index;
+}
+
 void Keyboard::clear_text() {
     // while (!typed_text.empty()) {
     //     typed_text.pop();
