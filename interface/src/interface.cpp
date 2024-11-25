@@ -12,6 +12,7 @@ Interface::~Interface() {
 }
 
 void Interface::init(std::string phrase) {
+
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         std::cerr << "SDL Initialization failed: " << SDL_GetError() << std::endl;
         return;
@@ -22,7 +23,7 @@ void Interface::init(std::string phrase) {
     width = DM.w * 0.8;
     height = DM.h * 0.8;
 
-    keyboard = new Keyboard(width, height, FONT_SPACING, FONT_SIZE);
+    keyboard = new Keyboard(3, width - (2*(FONT_SIZE + FONT_SPACING)), 3, height, FONT_SPACING, FONT_SIZE);
 
     std::cout << "Width: " << width << " Height: " << height << std::endl;
 
@@ -54,7 +55,7 @@ void Interface::init(std::string phrase) {
     myplayer.color = c;
     players.push_back(myplayer);
 
-
+    // ser the phrase to be typed in the interface
     setPhrase(phrase);
 
     running = true;
@@ -267,14 +268,24 @@ void Interface::setPhrase(std::string phrase){
 }
 
 void Interface::renderPhrase(std::string phrase){
-    for(int i = 0; i < int(phrase.size()); i++){
-        int pos_index = i*(fontsize + FONT_SPACING);
-        int x, y;
+    vi box_delimiters = keyboard->get_box_delimeters();
+    int iniXpos = box_delimiters[0];
+    int maxWidth = box_delimiters[1];
+    int iniYpos = box_delimiters[2];
+    int x = iniXpos;
+    int y = iniYpos;
 
-        x = pos_index % (width - (fontsize + FONT_SPACING));
-        y = pos_index / (width - (fontsize + FONT_SPACING));
-        
-        draw_phrase_letter_to_screen(x, y*(fontsize + FONT_SPACING), keyboard->get_phrase()[i]);
+    for(int i = 0; i < int(phrase.size()); i++){
+
+        draw_phrase_letter_to_screen(x*(fontsize + FONT_SPACING), y*(fontsize + FONT_SPACING), phrase[i]);
+        x++;
+
+        int final_width = (x + 2) * (fontsize + FONT_SPACING); 
+
+        if (final_width > maxWidth){
+            x = iniXpos;
+            y++;
+        }
     }
 }
 
@@ -303,11 +314,27 @@ void Interface::renderTypedText(std::string phrase){
 }
 
 void Interface::renderPlayerPosition(Player * player){
-    int aux = keyboard->get_last_index()*(fontsize + FONT_SPACING);
-    int x, y;
+    int aux = keyboard->get_last_index();
+    vi box_delimiters = keyboard->get_box_delimeters();
+    int iniXpos = box_delimiters[0];
+    int maxWidth = box_delimiters[1];
+    int iniYpos = box_delimiters[2];
+    
 
-    x = aux % (width - (fontsize + FONT_SPACING));
-    y = aux / (width - (fontsize + FONT_SPACING));
+    int x = iniXpos;
+    int y = iniYpos;
 
-    draw_player_position(x, y*(fontsize + FONT_SPACING), player->color);
+    for (int i = 0; i < aux; i++){
+        int final_width = (x + 2) * (fontsize + FONT_SPACING);
+
+        if (final_width > maxWidth){
+            x = iniXpos;
+            y++;
+        }
+        else {
+            x++;
+        }
+    }
+
+    draw_player_position(x*(fontsize + FONT_SPACING), y*(fontsize + FONT_SPACING), player->color);
 }

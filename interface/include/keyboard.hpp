@@ -14,6 +14,8 @@ typedef std::pair<char, PositionIndex> PositionedLetter;
 
 typedef std::deque<PositionedLetter> PositionedText;
 
+typedef std::vector<int> vi;
+
 
 // handler to deal with keyboard stacking letters logic
 class Keyboard{
@@ -27,7 +29,9 @@ class Keyboard{
         std::string phrase;
 
         // max screen values so it knows when to overflow text
+        int iniXpos;
         int maxWidth;
+        int iniYpos;
         int maxHeight;
 
         // space between letters. This is used to calculate the width of the text
@@ -38,7 +42,7 @@ class Keyboard{
         int last_index;
 
     public:
-        Keyboard(int maxWidth, int maxHeight, int font_spacing, int font_size);
+        Keyboard(int iniWidth, int maxWidth, int iniHeight, int maxHeight, int font_spacing, int font_size);
         ~Keyboard();
 
         // set the phrase to be typed
@@ -62,6 +66,8 @@ class Keyboard{
         PositionedText get_positioned_text();
 
         int get_last_index();
+
+        vi get_box_delimeters();
 };
 
 #endif
