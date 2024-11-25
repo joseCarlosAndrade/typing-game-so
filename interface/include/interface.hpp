@@ -64,6 +64,8 @@ class Interface {
         int draw_phrase_letter_to_screen(int x, int y, char letter);
         int draw_wrong_letter_to_screen(int x, int y, char letter);
         int draw_player_position(int x, int y, SDL_Color color);
+        int draw_rectangle_limits();
+        void draw_black_rectangle(SDL_Rect outerRect);
 
 
         void renderPhrase(std::string phrase);

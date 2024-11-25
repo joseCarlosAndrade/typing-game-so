@@ -1,6 +1,9 @@
 #include "interface.hpp"
 #include <SDL2/SDL_ttf.h>
 
+#define BORDER 5
+#define PAD_RECTANGLE 40
+
 Interface::Interface()
     : FPS(60), running(false), stopWindow(false), window(nullptr), renderer(nullptr), font(nullptr), fontsize(FONT_SIZE) {
     
@@ -75,6 +78,8 @@ void Interface::render() {
     // write text to screen
     // draw_correct_letter_to_screen(100, 100, 'A');
     std::string phrase = keyboard->get_phrase();
+
+    draw_rectangle_limits();
 
     renderPhrase(phrase);
     renderTypedText(phrase);
@@ -259,6 +264,56 @@ int Interface::draw_player_position(int x, int y, SDL_Color color){
     SDL_FreeSurface(surface);
     SDL_RenderCopy(renderer, texture, NULL, &textRect);
     SDL_DestroyTexture(texture);
+
+    return 0;
+}
+
+void Interface::draw_black_rectangle(SDL_Rect outerRect) {
+    SDL_Rect innerRect;
+    innerRect.x = outerRect.x + 5; // Adjust border thickness
+    innerRect.y = outerRect.y + 5;
+    innerRect.w = outerRect.w - 10; // Subtract border thickness on both sides
+    innerRect.h = outerRect.h - 10;
+
+    SDL_Surface *surface = SDL_CreateRGBSurface(0, innerRect.w, innerRect.h, 32, 0, 0, 0, 0);
+    SDL_PixelFormat *pf = surface->format;
+    int color = SDL_MapRGB(pf, 0, 0, 0);
+
+    SDL_FillRect(surface, NULL, color);
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    SDL_FreeSurface(surface);
+
+    SDL_RenderCopy(renderer, texture, NULL, &innerRect);
+    SDL_DestroyTexture(texture);
+}
+
+int Interface::draw_rectangle_limits() {
+    vi box_delimiters = keyboard->get_box_delimeters();
+    int maxWidth = box_delimiters[1];
+    int maxHeight = box_delimiters[3];
+
+    SDL_Rect outerRect;
+    outerRect.x = 40;
+    outerRect.y = 40;
+    outerRect.w = maxWidth-PAD_RECTANGLE;
+    outerRect.h = maxHeight / 2;
+
+    SDL_Surface *surface = SDL_CreateRGBSurface(0, outerRect.w, outerRect.h, 32, 0, 0, 0, 0);
+    SDL_PixelFormat *pf = surface->format;
+    int color = SDL_MapRGB(pf, 255, 255, 255);
+
+    SDL_FillRect(surface, NULL, color);
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    SDL_FreeSurface(surface);
+
+    SDL_RenderCopy(renderer, texture, NULL, &outerRect);
+    SDL_DestroyTexture(texture);
+
+    draw_black_rectangle(outerRect); // Pass the outer rectangle to calculate inner one
 
     return 0;
 }
