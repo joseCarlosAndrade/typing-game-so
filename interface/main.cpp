@@ -13,7 +13,7 @@ int main() {
     }
 
     Interface interface = Interface();
-    interface.init("testetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetest");
+    interface.init("Shogo eh um bobalhao");
 
     while (interface.isRunning()) {
         interface.handleEvents();

@@ -1,7 +1,7 @@
 #include "keyboard.hpp"
 
-Keyboard::Keyboard( int maxWidh, int maxHeight, int font_spacing , int font_size) 
-    : maxWidth(maxWidh), maxHeight(maxHeight), font_spacing(font_spacing), font_size(font_size) {
+Keyboard::Keyboard(int iniXpos, int maxWidth, int iniYpos, int maxHeight, int font_spacing , int font_size) 
+    :iniXpos(iniXpos), maxWidth(maxWidth), iniYpos(iniYpos), maxHeight(maxHeight), font_spacing(font_spacing), font_size(font_size) {
     phrase = "";
     last_index = 0;
 }
@@ -29,8 +29,8 @@ void Keyboard::insert_letter(char letter) {
 
     // if empty, just isnert at 0,0
     if (index_positioned_text.empty()) {
-        pl.second.x = 0;
-        pl.second.y = 0;
+        pl.second.x = iniXpos;
+        pl.second.y = iniYpos;
         index_positioned_text.push_back(pl);
 
     } else {
@@ -43,7 +43,7 @@ void Keyboard::insert_letter(char letter) {
 
         if (final_width > maxWidth) {
             // insert on the next line
-            pl.second.x = 0;
+            pl.second.x = iniYpos;
             pl.second.y = last_letter.second.y + 1;
             index_positioned_text.push_back(pl);
         } else {
@@ -76,6 +76,15 @@ void Keyboard::clear_text() {
     // while (!typed_text.empty()) {
     //     typed_text.pop();
     // }
+}
+
+vi Keyboard::get_box_delimeters(){
+    vi vet;
+    vet.push_back(iniXpos);
+    vet.push_back(maxWidth);
+    vet.push_back(iniYpos);
+    vet.push_back(maxHeight);
+    return vet;
 }
 
 // std::string Keyboard::get_typed_text() {
