@@ -25,7 +25,7 @@ bin/protocol.o: ../protocol/protocol.cpp ../protocol/protocol.hpp
 	g++ $(CPP_FLAGS) -c ../protocol/protocol.cpp $(THREAD_FLAGS) -o bin/protocol.o
 
 run:
-	./bin/game	
+	./bin/game ${NAME}
 
 clean:
 	rm -f bin/*.o

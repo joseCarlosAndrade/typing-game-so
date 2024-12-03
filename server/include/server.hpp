@@ -15,15 +15,17 @@ private:
     int serverSocket;            // Socket descriptor for the server
     std::atomic<bool> isRunning; // Flag to indicate if the server is running
 
-    std::map<int, int> rankings; // Player ID to Score map
-    std::mutex rankingsMutex;    // Mutex to protect rankings
+    std::multimap<std::pair<int, int>, std::string> rankings; // {{score, timestamp}, name}
+    std::map<std::string, int> playerScores;  // Player name to score map for quick lookups
+    std::mutex rankingsMutex;                 // Mutex to protect rankings
 
     std::vector<std::thread> threads; // Threads for handling clients
 
-    void handlePlayer(int clientSocket, int playerId); // Handle an individual player
-    void updateRanking(int playerId, int score);       // Update a player's ranking
-    void closeAllThreads();                            // Clean up threads
-    void closeSocket();                                // Close the server socket
+    void handlePlayer(int clientSocket, int playerId);     // Handle an individual player
+    void updateRanking(std::string playerName, int score, int timestamp); // Update a player's ranking
+    void printRankings();
+    void closeAllThreads(); // Clean up threads
+    void closeSocket();     // Close the server socket
 
 public:
     explicit Server(int portno = 12345); // Constructor with default port

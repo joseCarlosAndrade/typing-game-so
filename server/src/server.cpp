@@ -1,4 +1,5 @@
 #include "server.hpp"
+#include "protocol.hpp"
 
 // Constructor: Initialize server with a specific port
 Server::Server(int portno) : PORT(portno), serverSocket(-1), isRunning(false) {}
@@ -70,7 +71,6 @@ void Server::stop() {
 // Handle a single player
 void Server::handlePlayer(int clientSocket, int playerId) {
     char buffer[1024];
-    
 
     while (isRunning) {
         memset(buffer, 0, sizeof(buffer));
@@ -86,20 +86,55 @@ void Server::handlePlayer(int clientSocket, int playerId) {
 
         // Process player's input
         std::string input(buffer);
-        int score = input.length(); // Example: Score based on input length
+        ClientMessage message = ClientMessage::decode(input);
+        std::cout << message.data.name << "[" << playerId << "]" << ": " << message.data.score << ", " << message.data.timestamp << std::endl;
 
         // Update rankings safely
-        updateRanking(playerId, score);
+        updateRanking(message.data.name, message.data.score, message.data.timestamp);
+
+        // Send response to player
+        ServerMessage response(rankings.size(), rankings);
+        std::string encodedresponse = response.encode();
+        if (send(clientSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
+            std::cerr << "Error sending response to client.\n";
+            break;
+        } else
+            std::cout << "Response sent to socket " << clientSocket << ": " << encodedresponse << std::endl;
     }
 
     close(clientSocket);
 }
 
 // Update rankings thread-safely
-void Server::updateRanking(int playerId, int score) {
+void Server::updateRanking(std::string playerName, int score, int timestamp) {
     std::lock_guard<std::mutex> lock(rankingsMutex);
-    rankings[playerId] += score;
-    std::cout << "Player " << playerId << "'s score updated to " << rankings[playerId] << std::endl;
+
+    // Remove old score from the multimap
+    auto it = playerScores.find(playerName);
+    if (it != playerScores.end()) {
+        int oldScore = it->second;
+        for (auto itr = rankings.begin(); itr != rankings.end(); ++itr) {
+            if (itr->first.first == oldScore && itr->second == playerName) {
+                rankings.erase(itr);
+                break;
+            }
+        }
+    }
+
+    // Update the player's score in the playerScores map
+    playerScores[playerName] = score;
+
+    // Insert the updated score into the multimap
+    rankings.insert({{score, timestamp}, playerName});
+    std::cout << "Player " << playerName << "'s score updated to " << score << std::endl;
+}
+
+void Server::printRankings() {
+    std::lock_guard<std::mutex> lock(rankingsMutex);
+    std::cout << "Rankings:" << std::endl;
+    for (auto it = rankings.rbegin(); it != rankings.rend(); ++it) { // Iterate in descending order
+        std::cout << it->second << ": " << it->first.first << ", " << std::endl;
+    }
 }
 
 // Close all threads

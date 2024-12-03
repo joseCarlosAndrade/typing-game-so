@@ -2,7 +2,15 @@
 #include "interface.hpp"
 #include <iostream>
 
-int main() {
+int main(int argc, char *argv[]) {
+
+    if (argc != 2) {
+        std::cout << "Please write your name when running the program:" << std::endl;
+        std::cout << "make run NAME=your_name" << std::endl;
+        exit(1);
+    }
+    std::cout << "Welcome, " << argv[1] << std::endl;
+
     const std::string serverIP = "127.0.0.1"; // Server's IP address
     const int PORT = 12345;                   // Server's port number
     Client client(serverIP, PORT);
@@ -12,12 +20,12 @@ int main() {
         return 1;
     }
 
-    Interface interface = Interface();
+    Interface interface;
     interface.init("Shogo eh um bobalhao");
 
     while (interface.isRunning()) {
         interface.handleEvents();
-        interface.update();
+        interface.update(argv[1], client);
         interface.render();
     }
 

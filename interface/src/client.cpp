@@ -3,6 +3,15 @@
 Client::Client(const std::string &ip, int portno) : serverIP(ip), PORT(portno) {}
 
 Client::~Client() {
+    {
+        std::unique_lock<std::mutex> lock(queueMutex);
+        stopSender = true;
+    }
+    queueCV.notify_all();
+    if (senderThread.joinable()) {
+        senderThread.join();
+    }
+
     close(clientSocket);
 }
 
@@ -12,6 +21,8 @@ int Client::connectToServer() {
         perror("ERROR opening socket");
         return -1;
     }
+
+    senderThread = std::thread(&Client::processQueue, this);
 
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
@@ -31,54 +42,14 @@ int Client::connectToServer() {
     return 0;
 }
 
-void Client::sendInput() {
-    std::thread sender([this]() {
-        while (true) {
-            std::string input;
-            std::cout << "Type a word: ";
-            std::getline(std::cin, input);
-
-            if (input.empty()) continue;
-
-            if (send(clientSocket, input.c_str(), input.size(), 0) < 0) {
-                perror("ERROR sending data to server");
-                break;
-            }
-        }
-    });
-
-    sender.detach(); // Detach to allow other functions to run concurrently
-}
-
 void Client::sendData(std::string data) {
-    std::thread sender([this, data]() {
-        while (true) {
-            if (data.empty()) continue;
-
-            if (send(clientSocket, data.c_str(), data.size(), 0) < 0) {
-                perror("ERROR sending data to server");
-                break;
-            }
-        }
-    });
-
-    sender.detach();
+    {
+        std::unique_lock<std::mutex> lock(queueMutex);
+        sendQueue.push(data);
+    }
+    queueCV.notify_one();
 }
 
 void Client::receiveUpdates() {
-    std::thread receiver([this]() {
-        char buffer[1024];
-        while (true) {
-            memset(buffer, 0, sizeof(buffer));
-            int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-            if (bytesReceived <= 0) {
-                perror("ERROR receiving data from server");
-                break;
-            }
-
-            std::cout << "Server: " << buffer << std::endl;
-        }
-    });
-
-    receiver.detach(); // Detach to allow other functions to run concurrently
+    
 }

@@ -64,9 +64,17 @@ void Interface::init(std::string phrase) {
     running = true;
 }
 
-void Interface::update() {
+void Interface::update(std::string name, Client& client) {
     // Update game logic here
     // will add players to the vector or remove
+
+    // send data to the server
+    ClientMessage message(name, players[0].position_index);
+    std::string encodedMessage = message.encode();
+    client.sendData(encodedMessage);
+
+    // need to receive data from the server
+    // client.receiveUpdates();
 }
 
 void Interface::render() {
@@ -149,6 +157,10 @@ void Interface::setStop(bool stop) {
 
 void Interface::setRunning(bool running) {
     this->running = running;
+}
+
+void Interface::incPlayerIndex() {
+    this->players[0].position_index++;
 }
 
 int Interface::getFPS() {
@@ -356,8 +368,10 @@ void Interface::renderTypedText(std::string phrase){
             // if the typed letter is equals to the phrase letter
             if (pl.first == phrase[pl.second.index]){
                 draw_correct_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first);
-            }
-            else
+
+                incPlayerIndex(); // ADDED THIS FOR SCORING (MUDE POR FAVOR)
+
+            } else
                 draw_wrong_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), phrase[pl.second.index]);
         }
         

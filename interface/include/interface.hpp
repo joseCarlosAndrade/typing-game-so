@@ -5,6 +5,7 @@
 #include<SDL2/SDL.h>
 #include<SDL2/SDL_ttf.h>
 #include"keyboard.hpp"
+#include "client.hpp"
 
 #define FONT_SIZE 24
 #define FONT_SPACING 5
@@ -43,7 +44,7 @@ class Interface {
         ~Interface();
 
         void init(std::string phrase);
-        void update();
+        void update(std::string name, Client& client);
         void render();
         void handleEvents();
         void clean();
@@ -52,6 +53,7 @@ class Interface {
         bool stop();
         void setStop(bool stop);
         void setRunning(bool running);
+        void incPlayerIndex();
         int getFPS();
         int getWidth();
         int getHeight();
