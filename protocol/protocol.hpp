@@ -5,44 +5,33 @@
 
 // Struct for crucial data that will be passed
 struct PlayerData {
-    int id;        // Player ID
-    int score;     // Player's score
-    int timestamp; // Timestamp
+    std::string name; // Player name
+    int score;        // Player's score
+    int timestamp;    // Timestamp
 
     // Constructor
-    PlayerData(int id, int score, int timestamp)
-        : id(id),
+    PlayerData(std::string name, int score, int timestamp)
+        : name(name),
           score(score),
           timestamp(timestamp) {}
-};
-
-// Struct made for comparing player data when Adding
-struct ComparePlayerData {
-    bool operator()(const PlayerData &a, const PlayerData &b) const {
-        if (a.score != b.score) {
-            return a.score > b.score; // Descending order by score
-        }
-        // Otherwise, use timestamp (earlier is better)
-        return a.timestamp < b.timestamp;
-    }
 };
 
 class ServerMessage {
 public:
     int playerCount;
-    std::set<PlayerData, ComparePlayerData> allData;
+    std::multimap<std::pair<int, int>, std::string> rankings; // {{score, timestamp}, name}
     bool isRunning;
 
     // Constructor
-    ServerMessage(int count)
+    ServerMessage(int count, std::multimap<std::pair<int, int>, std::string> rankings)
         : playerCount(count),
-          allData(),
+          rankings(rankings),
           isRunning(true) {}
 
-    // Set player data
-    void insert(int id, int score, int timestamp) {
-        allData.insert(PlayerData(id, score, timestamp));
-    }
+    ServerMessage(int count)
+        : playerCount(count),
+          rankings(),
+          isRunning(true) {}
 
     // Encoding function
     std::string encode();
@@ -56,8 +45,8 @@ public:
     PlayerData data;
 
     // Constructor
-    ClientMessage(int id, int sc, int ts = getCurrentTimestamp())
-        : data(id, sc, ts) {}
+    ClientMessage(std::string name, int sc, int ts = getCurrentTimestamp())
+        : data(name, sc, ts) {}
 
     // Encoding function
     std::string encode();

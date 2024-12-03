@@ -3,8 +3,8 @@
 std::string ServerMessage::encode() {
     std::ostringstream oss;
     oss << playerCount << " " << isRunning << " ";
-    for (const auto &data : allData) {
-        oss << data.id << " " << data.score << " " << data.timestamp << " ";
+    for (const auto &data : rankings) {
+        oss << data.first.first << " " << data.first.second << " " << data.second << " ";
     }
     return oss.str();
 }
@@ -17,9 +17,10 @@ ServerMessage ServerMessage::decode(const std::string &data) {
 
     iss >> message.isRunning;
     while (!iss.eof()) {
-        int id, score, timestamp;
-        if (iss >> id >> score >> timestamp) {
-            message.allData.insert(PlayerData(id, score, timestamp));
+        std::string name;
+        int score, timestamp;
+        if (iss >> score >> timestamp >> name) {
+            message.rankings.insert({{score, timestamp}, name});
         }
     }
     return message;
@@ -28,15 +29,16 @@ ServerMessage ServerMessage::decode(const std::string &data) {
 // client message encoding and decoding
 std::string ClientMessage::encode() {
     std::ostringstream oss;
-    oss << data.id << " " << data.score << " " << data.timestamp;
+    oss << data.name << " " << data.score << " " << data.timestamp;
     return oss.str();
 }
 
 ClientMessage ClientMessage::decode(const std::string &data) {
     std::istringstream iss(data);
-    int id, score, timestamp;
-    iss >> id >> score >> timestamp;
-    return ClientMessage(id, score, timestamp);
+    std::string name;
+    int score, timestamp;
+    iss >> name >> score >> timestamp;
+    return ClientMessage(name, score, timestamp);
 }
 
 // test script
