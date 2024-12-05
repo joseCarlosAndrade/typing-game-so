@@ -41,7 +41,6 @@ void Server::start() {
         sockaddr_in clientAddr{};
         socklen_t clientLen = sizeof(clientAddr);
         int clientSocket = accept(serverSocket, (sockaddr *)&clientAddr, &clientLen);
-
         if (clientSocket < 0) {
             if (!isRunning) break; // Stop accepting if server is stopping
             perror("ERROR on accept");
@@ -51,7 +50,7 @@ void Server::start() {
         std::cout << "Player " << playerId << " connected." << std::endl;
 
         // Spawn a thread to handle the player
-        threads.emplace_back(&Server::handlePlayer, this, clientSocket, playerId++);
+        threads.emplace_back(&Server::handlePlayer, this, clientSocket, playerId++, clientAddr);
     }
 
     closeAllThreads();
@@ -69,8 +68,27 @@ void Server::stop() {
 }
 
 // Handle a single player
-void Server::handlePlayer(int clientSocket, int playerId) {
+void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
     char buffer[1024];
+
+    int senderSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (senderSocket < 0) {
+        perror("ERROR creating socket");
+        return;
+    }
+    // For now, the receiving port of the client is always the next from the sender
+    // addr.sin_port = htons(ntohs(addr.sin_port) + 1); 
+    addr.sin_port = htons(12346); // TODO : no more gambiarra, create a system for the second port
+    socklen_t len = sizeof(addr);
+    std::cout << "Attempting connection to " << addr.sin_addr.s_addr << ":" << ntohs(addr.sin_port) << std::endl;
+    if(connect(senderSocket, (sockaddr *)&addr, len) < 0 ){
+        perror("ERROR connecting to client");
+        return;
+    }
+
+    // Saves to the class map
+    playerConections[playerId] = {clientSocket, senderSocket};
 
     while (isRunning) {
         memset(buffer, 0, sizeof(buffer));
@@ -95,11 +113,11 @@ void Server::handlePlayer(int clientSocket, int playerId) {
         // Send response to player
         ServerMessage response(rankings.size(), rankings);
         std::string encodedresponse = response.encode();
-        if (send(clientSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
+        if (send(senderSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
             std::cerr << "Error sending response to client.\n";
             break;
         } else
-            std::cout << "Response sent to socket " << clientSocket << ": " << encodedresponse << std::endl;
+            std::cout << "Response sent to socket " << senderSocket << ": " << encodedresponse << std::endl;
     }
 
     close(clientSocket);

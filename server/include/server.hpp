@@ -17,11 +17,13 @@ private:
 
     std::multimap<std::pair<int, int>, std::string> rankings; // {{score, timestamp}, name}
     std::map<std::string, int> playerScores;  // Player name to score map for quick lookups
-    std::mutex rankingsMutex;                 // Mutex to protect rankings
+    std::mutex rankingsMutex;              // Mutex to protect rankings
+
+    std::map<int, std::pair<int, int>> playerConections; //PlayerID -> player socket{sender, receiver}
 
     std::vector<std::thread> threads; // Threads for handling clients
 
-    void handlePlayer(int clientSocket, int playerId);     // Handle an individual player
+    void handlePlayer(int clientSocket, int playerId, sockaddr_in addr);     // Handle an individual player
     void updateRanking(std::string playerName, int score, int timestamp); // Update a player's ranking
     void printRankings();
     void closeAllThreads(); // Clean up threads

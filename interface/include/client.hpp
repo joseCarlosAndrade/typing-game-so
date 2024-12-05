@@ -11,8 +11,12 @@
 class Client {
 private:
     std::string serverIP;
-    int PORT;
-    int clientSocket;
+    int senderPORT;
+    int senderSocket;
+
+    // Receiving socket variables
+    int receivePORT;
+    int receivingSocket;
 
     std::queue<std::string> sendQueue;
     std::mutex queueMutex;
@@ -22,6 +26,11 @@ private:
 
     std::mutex receiveMutex;
     std::thread receiverThread;
+    bool stopReceiver = false;
+
+    // Player rankings
+    std::mutex rankingMutex;
+    std::multimap<std::pair<int, int>, std::string> rankings;
 
     void processQueue() {
         while (true) {
@@ -34,7 +43,7 @@ private:
             sendQueue.pop();
             lock.unlock();
 
-            if (!data.empty() && send(clientSocket, data.c_str(), data.size(), 0) < 0) {
+            if (!data.empty() && send(senderSocket, data.c_str(), data.size(), 0) < 0) {
                 perror("ERROR sending data to server");
             }
         }
