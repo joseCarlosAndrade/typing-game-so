@@ -42,6 +42,9 @@ class Keyboard{
         int last_index;
 
     public:
+
+        int last_correct_index;
+
         Keyboard(int iniWidth, int maxWidth, int iniHeight, int maxHeight, int font_spacing, int font_size);
         ~Keyboard();
 
