@@ -4,6 +4,7 @@ Keyboard::Keyboard(int iniXpos, int maxWidth, int iniYpos, int maxHeight, int fo
     :iniXpos(iniXpos), maxWidth(maxWidth), iniYpos(iniYpos), maxHeight(maxHeight), font_spacing(font_spacing), font_size(font_size) {
     phrase = "";
     last_index = 0;
+    last_correct_index = 0;
 }
 
 Keyboard::~Keyboard() {
@@ -25,7 +26,12 @@ void Keyboard::insert_letter(char letter) {
     PositionedLetter pl;
     pl.first = letter;
     pl.second.index = last_index;
+    if ((letter == phrase[last_correct_index]) && (last_correct_index >= last_index)){
+        last_correct_index++;
+    }
     last_index++;
+
+
 
     // if empty, just isnert at 0,0
     if (index_positioned_text.empty()) {
@@ -60,6 +66,8 @@ void Keyboard::delete_letter() {
 
     if (!index_positioned_text.empty()) {
         index_positioned_text.pop_back();
+        if (last_index == last_correct_index)
+            last_correct_index--;
         last_index--;
     }
 }

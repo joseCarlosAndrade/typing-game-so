@@ -12,7 +12,9 @@
 
 typedef struct {
     SDL_Color color;
-    int position_index;
+    std::string name;
+    int last_correct_index;
+    int actual_index;
 } Player;
 
 typedef std::vector<Player> vp;
@@ -34,6 +36,8 @@ class Interface {
         SDL_Renderer* renderer;
         SDL_Event event;
 
+        std::string phrase;
+
         TTF_Font* font;
         int fontsize;
         
@@ -43,10 +47,12 @@ class Interface {
         Interface();
         ~Interface();
 
-        void init(std::string phrase);
+        void init(std::string phrase, std::string name);
         void update(std::string name, Client& client);
         void render();
+        bool PlayerFinished();
         void handleEvents();
+        void checkExitGame();
         void clean();
 
         bool isRunning();
@@ -62,9 +68,7 @@ class Interface {
         SDL_Window* getWindow();
 
         // text handling
-        int draw_correct_letter_to_screen(int x, int y, char letter);
-        int draw_phrase_letter_to_screen(int x, int y, char letter);
-        int draw_wrong_letter_to_screen(int x, int y, char letter);
+        int draw_letter_to_screen(int x, int y, char letter, SDL_Color color);
         int draw_player_position(int x, int y, SDL_Color color);
         int draw_rectangle_limits();
         void draw_black_rectangle(SDL_Rect outerRect);
@@ -72,8 +76,10 @@ class Interface {
 
         void renderPhrase(std::string phrase);
         void setPhrase(std::string phrase);
-        void renderTypedText(std::string phrase);
-        void renderPlayerPosition(Player * player);
+        void renderTypedText();
+        void renderPlayerPosition(Player * player, int index);
+
+        void renderRank(vp players);
 
 };
 
