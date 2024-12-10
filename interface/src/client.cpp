@@ -99,7 +99,7 @@ void Client::receiveUpdates() {
         // Critical region for updating score
         std::unique_lock<std::mutex> rankLock(rankingMutex);
         rankings = message.rankings;
-        for(auto pair : rankings) std::cout << pair.second << ":" << pair.first.first << std::endl; 
+        for(auto pair : rankings) std::cout << pair.first << ":" << pair.second.first  << std::endl; 
         rankLock.unlock();
         std::cout << "Score updated" << std::endl;
     }

@@ -132,7 +132,7 @@ void Server::updateRanking(std::string playerName, int score, int timestamp) {
     if (it != playerScores.end()) {
         int oldScore = it->second;
         for (auto itr = rankings.begin(); itr != rankings.end(); ++itr) {
-            if (itr->first.first == oldScore && itr->second == playerName) {
+            if (itr->second.first == oldScore && itr->first == playerName) {
                 rankings.erase(itr);
                 break;
             }
@@ -143,7 +143,7 @@ void Server::updateRanking(std::string playerName, int score, int timestamp) {
     playerScores[playerName] = score;
 
     // Insert the updated score into the multimap
-    rankings.insert({{score, timestamp}, playerName});
+    rankings.insert({playerName, {score, timestamp}});
     std::cout << "Player " << playerName << "'s score updated to " << score << std::endl;
 }
 
@@ -151,7 +151,7 @@ void Server::printRankings() {
     std::lock_guard<std::mutex> lock(rankingsMutex);
     std::cout << "Rankings:" << std::endl;
     for (auto it = rankings.rbegin(); it != rankings.rend(); ++it) { // Iterate in descending order
-        std::cout << it->second << ": " << it->first.first << ", " << std::endl;
+        std::cout << it->first << ": " << it->second.first << ", " << std::endl;
     }
 }
 

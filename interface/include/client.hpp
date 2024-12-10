@@ -30,7 +30,7 @@ private:
 
     // Player rankings
     std::mutex rankingMutex;
-    std::multimap<std::pair<int, int>, std::string> rankings;
+    std::multimap<std::string, std::pair<int, int>> rankings;
 
     void processQueue() {
         while (true) {

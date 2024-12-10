@@ -4,7 +4,7 @@ std::string ServerMessage::encode() {
     std::ostringstream oss;
     oss << playerCount << " " << isRunning << " ";
     for (const auto &data : rankings) {
-        oss << data.first.first << " " << data.first.second << " " << data.second << " ";
+        oss << data.second.first << " " << data.second.second << " " << data.first << " ";
     }
     return oss.str();
 }
@@ -20,7 +20,7 @@ ServerMessage ServerMessage::decode(const std::string &data) {
         std::string name;
         int score, timestamp;
         if (iss >> score >> timestamp >> name) {
-            message.rankings.insert({{score, timestamp}, name});
+            message.rankings.insert({name, {score, timestamp}});
         }
     }
     return message;
