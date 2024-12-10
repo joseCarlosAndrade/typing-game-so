@@ -4,6 +4,10 @@
 #define BORDER 5
 #define PAD_RECTANGLE 40
 
+SDL_Color white = {255, 255, 255, 255};
+SDL_Color red = {255, 0, 0, 255};
+SDL_Color faded = {255, 255, 255, 100};
+
 Interface::Interface()
     : FPS(60), running(false), stopWindow(false), window(nullptr), renderer(nullptr), font(nullptr), fontsize(FONT_SIZE) {
     
@@ -14,7 +18,7 @@ Interface::~Interface() {
     clean();
 }
 
-void Interface::init(std::string phrase) {
+void Interface::init(std::string phrase, std::string name) {
 
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         std::cerr << "SDL Initialization failed: " << SDL_GetError() << std::endl;
@@ -54,9 +58,20 @@ void Interface::init(std::string phrase) {
     // add myplayer to the interface vector of players
     Player myplayer;
     SDL_Color c = {255, 255, 255, 255};
-    myplayer.position_index = keyboard->get_last_index();
+    myplayer.last_correct_index = 0;
+    myplayer.actual_index = 0;
     myplayer.color = c;
+    myplayer.name = name;
     players.push_back(myplayer);
+
+    Player second_player;
+    SDL_Color c2 = {255, 0, 255, 0};
+    second_player.last_correct_index = 0;
+    second_player.actual_index = 0;
+    second_player.color = c2;
+    second_player.name = "JoseRuim";
+    players.push_back(second_player);
+
 
     // ser the phrase to be typed in the interface
     setPhrase(phrase);
@@ -68,13 +83,21 @@ void Interface::update(std::string name, Client& client) {
     // Update game logic here
     // will add players to the vector or remove
 
+    players[0].last_correct_index = keyboard->last_correct_index;
+    players[0].actual_index = keyboard->get_last_index();
+
     // send data to the server
-    ClientMessage message(name, players[0].position_index);
+    ClientMessage message(name, keyboard->last_correct_index);
     std::string encodedMessage = message.encode();
     client.sendData(encodedMessage);
 
     // need to receive data from the server
     // client.receiveUpdates();
+
+
+
+
+
 }
 
 void Interface::render() {
@@ -88,12 +111,13 @@ void Interface::render() {
     std::string phrase = keyboard->get_phrase();
 
     draw_rectangle_limits();
-
     renderPhrase(phrase);
-    renderTypedText(phrase);
+    renderTypedText();
+
+    renderRank(this->players);
     
     for (int i = 0; i < int(players.size()); i++){
-        renderPlayerPosition(&players[i]);
+        renderPlayerPosition(&players[i], players[i].last_correct_index);
     }
 
 
@@ -115,13 +139,16 @@ void Interface::handleEvents() {
                 std::cout << "Key pressed: " << SDL_GetKeyName(event.key.keysym.sym) << " NUMBER: " << key << std::endl;
                 if (key == SDLK_ESCAPE) {
                     running = false;
-                } else if (key >= SDLK_a && key <= SDLK_z) {
-                    char letter = key - SDLK_a + 'A'; // convert to uppercase
-                    keyboard->insert_letter(letter);
-                } else if (key == SDLK_BACKSPACE) {
-                    keyboard->delete_letter();
-                } else if (key == SDLK_SPACE) {
-                    keyboard->insert_letter(' ');
+
+                } else if (!PlayerFinished()) {
+                    if (key >= SDLK_a && key <= SDLK_z) {
+                        char letter = key - SDLK_a + 'A'; // convert to uppercase
+                        keyboard->insert_letter(letter);
+                    } else if (key == SDLK_BACKSPACE) {
+                        keyboard->delete_letter();
+                    } else if (key == SDLK_SPACE) {
+                        keyboard->insert_letter(' ');
+                    }
                 }
                 break;
 
@@ -147,6 +174,12 @@ bool Interface::isRunning() {
     return running;
 }
 
+bool Interface::PlayerFinished(){
+    if (keyboard->last_correct_index == (int(phrase.size())))
+        return true;
+    return false;
+}
+
 bool Interface::stop() {
     return stopWindow;
 }
@@ -160,7 +193,8 @@ void Interface::setRunning(bool running) {
 }
 
 void Interface::incPlayerIndex() {
-    this->players[0].position_index++;
+    this->players[0].last_correct_index++;
+    this->players[0].actual_index++;
 }
 
 int Interface::getFPS() {
@@ -187,62 +221,13 @@ SDL_Window *Interface::getWindow() {
     return window;
 }
 
-int Interface::draw_correct_letter_to_screen(int x, int y, char letter) {
-    // we dont need to init / clear / render anything, since this function will be called inside render()
-
-    SDL_Color color = {255, 255, 255, 255};
+int Interface::draw_letter_to_screen(int x, int y, char letter, SDL_Color color) {
 
     // conver char to char *
     char str[2];
-    str[0] = letter;
-    str[1] = '\0';
-
-    SDL_Surface *surface = TTF_RenderText_Solid(font, str, color);
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_Rect textRect;
-    textRect.x = x;
-    textRect.y = y;
-    textRect.w = surface->w;
-    textRect.h = surface->h;
-    SDL_FreeSurface(surface);
-    SDL_RenderCopy(renderer, texture, NULL, &textRect);
-    SDL_DestroyTexture(texture);
-
-    return 0;
-}
-
-int Interface::draw_phrase_letter_to_screen(int x, int y, char letter){
-    SDL_Color color = {255, 255, 255, 100};
-
-    // conver char to char *
-    char str[2];
-    str[0] = letter;
-    str[1] = '\0';
-
-    SDL_Surface *surface = TTF_RenderText_Solid(font, str, color);
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_Rect textRect;
-    textRect.x = x;
-    textRect.y = y;
-    textRect.w = surface->w;
-    textRect.h = surface->h;
-    SDL_FreeSurface(surface);
-    SDL_RenderCopy(renderer, texture, NULL, &textRect);
-    SDL_DestroyTexture(texture);
-
-    return 0;
-}
-
-int Interface::draw_wrong_letter_to_screen(int x, int y, char letter) {
-    // we dont need to init / clear / render anything, since this function will be called inside render()
-
-    SDL_Color color = {255, 0, 0, 255};
-
-    // conver char to char *
-    char str[2];
-    if (letter == ' ')
+    if ((letter == ' ') && (color.a == 255) && (color.b == 0) && (color.g == 0) && (color.r == 255))
         str[0] = '_';
-    else
+    else 
         str[0] = letter;
     str[1] = '\0';
 
@@ -332,6 +317,7 @@ int Interface::draw_rectangle_limits() {
 
 void Interface::setPhrase(std::string phrase){
     keyboard->setPhrase(phrase);
+    this->phrase = keyboard->get_phrase();
 }
 
 void Interface::renderPhrase(std::string phrase){
@@ -344,10 +330,10 @@ void Interface::renderPhrase(std::string phrase){
 
     for(int i = 0; i < int(phrase.size()); i++){
 
-        draw_phrase_letter_to_screen(x*(fontsize + FONT_SPACING), y*(fontsize + FONT_SPACING), phrase[i]);
+        draw_letter_to_screen(x*(fontsize + FONT_SPACING), y*(fontsize + FONT_SPACING), phrase[i], faded);
         x++;
 
-        int final_width = (x + 2) * (fontsize + FONT_SPACING); 
+        int final_width = (x + 1) * (fontsize + FONT_SPACING); 
 
         if (final_width > maxWidth){
             x = iniXpos;
@@ -356,34 +342,41 @@ void Interface::renderPhrase(std::string phrase){
     }
 }
 
-void Interface::renderTypedText(std::string phrase){
+void Interface::renderTypedText(){
     auto positioned_text = keyboard->get_positioned_text();
+
     // iterate though the positioned text and draw it to the screen
     for (; !positioned_text.empty(); positioned_text.pop_front()) {
         PositionedLetter pl = positioned_text.front();
 
-        // case the current letter position is in the bounds of the initial phrase
-        if (pl.second.index <= int(phrase.size()-1)){
+        
+        if (pl.second.index <= keyboard->last_correct_index){
 
-            // if the typed letter is equals to the phrase letter
-            if (pl.first == phrase[pl.second.index]){
-                draw_correct_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first);
-
-                incPlayerIndex(); // ADDED THIS FOR SCORING (MUDE POR FAVOR)
-
-            } else
-                draw_wrong_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), phrase[pl.second.index]);
+            
+            if ((pl.first == phrase[pl.second.index])){
+                draw_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first, white);
+            } 
+            else {
+                draw_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), phrase[pl.second.index], red);
+            }
         }
         
-        // case the current letter postition is above than the actual phrase size
+        
         else {
-            draw_wrong_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), pl.first);
+            if (pl.second.index < int(phrase.size())){
+                draw_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), phrase[pl.second.index], red);
+            }
+            else {
+                draw_letter_to_screen(pl.second.x * (fontsize + FONT_SPACING), pl.second.y * (fontsize + FONT_SPACING), ' ', red);
+            }
         }
+
+        
     }
 }
 
-void Interface::renderPlayerPosition(Player * player){
-    int aux = keyboard->get_last_index();
+void Interface::renderPlayerPosition(Player * player, int index){
+    int aux = index;
     vi box_delimiters = keyboard->get_box_delimeters();
     int iniXpos = box_delimiters[0];
     int maxWidth = box_delimiters[1];
@@ -406,4 +399,25 @@ void Interface::renderPlayerPosition(Player * player){
     }
 
     draw_player_position(x*(fontsize + FONT_SPACING), y*(fontsize + FONT_SPACING), player->color);
+}
+
+void Interface::renderRank(vp players){
+    int h = height - 2 * (fontsize + FONT_SPACING);
+    for (int i = 0; i < int(players.size()); i++, h = h - 2 * (fontsize + FONT_SPACING)){
+        int progress = 100*(float(players[i].last_correct_index)/float(phrase.size()));
+        std::string progress_str = std::to_string(progress);
+        std::string name = players[i].name;
+        int letter_screen_pos = 1;
+        for (int j = 0; j < int(name.size()); j++, letter_screen_pos++){
+            draw_letter_to_screen(letter_screen_pos*(fontsize + FONT_SPACING/2), h, name[j], players[i].color);
+        }
+        draw_letter_to_screen(letter_screen_pos*(fontsize + FONT_SPACING/2), h, ' ', players[i].color);
+        letter_screen_pos++;
+
+        for (int j = 0; j < int(progress_str.size()); j++, letter_screen_pos++){
+            draw_letter_to_screen(letter_screen_pos*(fontsize + FONT_SPACING/2), h, progress_str[j], players[i].color);
+        }
+        draw_letter_to_screen(letter_screen_pos*(fontsize + FONT_SPACING/2), h, '%', players[i].color);
+        letter_screen_pos++;
+    }
 }
