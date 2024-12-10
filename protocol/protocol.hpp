@@ -19,11 +19,11 @@ struct PlayerData {
 class ServerMessage {
 public:
     int playerCount;
-    std::multimap<std::pair<int, int>, std::string> rankings; // {{score, timestamp}, name}
+    std::multimap<std::string, std::pair<int, int>> rankings; // {{score, timestamp}, name}
     bool isRunning;
 
     // Constructor
-    ServerMessage(int count, std::multimap<std::pair<int, int>, std::string> rankings)
+    ServerMessage(int count, std::multimap<std::string, std::pair<int, int>> rankings)
         : playerCount(count),
           rankings(rankings),
           isRunning(true) {}

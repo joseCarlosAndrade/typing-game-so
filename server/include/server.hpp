@@ -15,7 +15,7 @@ private:
     int serverSocket;            // Socket descriptor for the server
     std::atomic<bool> isRunning; // Flag to indicate if the server is running
 
-    std::multimap<std::pair<int, int>, std::string> rankings; // {{score, timestamp}, name}
+    std::multimap<std::string, std::pair<int, int>> rankings; // {{score, timestamp}, name}
     std::map<std::string, int> playerScores;  // Player name to score map for quick lookups
     std::mutex rankingsMutex;              // Mutex to protect rankings
 
