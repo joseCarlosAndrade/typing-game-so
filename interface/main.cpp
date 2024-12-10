@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     }
 
     Interface interface;
-    interface.init("Shogo eh um bobalhao");
+    interface.init("Shogo eh um bobalhao Shogo eh um bobalhao Shogo eh um bobalhao Shogo eh um bobalhao", argv[1]);
 
     while (interface.isRunning()) {
         interface.handleEvents();
