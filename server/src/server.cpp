@@ -2,11 +2,42 @@
 #include "protocol.hpp"
 
 // Constructor: Initialize server with a specific port
-Server::Server(int portno) : PORT(portno), serverSocket(-1), isRunning(false) {}
+Server::Server(int portno) : PORT(portno), serverSocket(-1), gameState(ACCEPTING_CONNECTIONS), isRunning(false) {}
 
 // Destructor: Clean up resources
 Server::~Server() {
     stop();
+}
+
+// Start the main thread
+void Server::startCommandThread() {
+    // std::thread handleConnections(&Server::start, this);
+    threads.emplace_back(&Server::readCommands, this);
+}
+
+void Server::readCommands() {
+    std::string command;
+    while (true) {
+        std::cin >> command;
+        if (command == "stop") {
+            setGameState(ENDGAME);
+            break;
+        } else if (command == "print") {
+            printRankings();
+        } else if (command == "start") {
+            setGameState(WAITING_FOR_PLAYERS);
+            // start this thread!
+            std::cout << "Waiting for players." << std::endl;
+            
+        }
+    }
+}
+
+
+// thread safe function to change the game state
+void Server::setGameState(STATES state){
+    std::lock_guard<std::mutex> lock(gameStateMutex);
+    gameState = state;
 }
 
 // Start the server
@@ -37,7 +68,7 @@ void Server::start() {
 
     int playerId = 0;
 
-    while (isRunning) {
+    while (isRunning && (gameState == ACCEPTING_CONNECTIONS)) {
         sockaddr_in clientAddr{};
         socklen_t clientLen = sizeof(clientAddr);
         int clientSocket = accept(serverSocket, (sockaddr *)&clientAddr, &clientLen);
