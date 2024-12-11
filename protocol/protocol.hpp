@@ -26,18 +26,20 @@ public:
     ServerMessageType type;
     std::string phrase;
 
+    // P causa do -Werror tinha uns warning estanho, ai p compilar eu tirei esse constructor q so usava uma vez tbm
     // Constructor
-    ServerMessage(int count, std::multimap<std::string, std::pair<int, int>> rankings, std::string phrase, ServerMessageType type)
-        : playerCount(count),
-          rankings(rankings),
-          isRunning(true),
-          phrase(phrase),
-          type(type) {}
+    // ServerMessage(int count, std::multimap<std::string, std::pair<int, int>> rankings, std::string phrase, ServerMessageType type)
+    //     : playerCount(count),
+    //       rankings(rankings),
+    //       isRunning(true),
+    //       phrase(phrase),
+    //       type(type) {}
 
-    ServerMessage(int count)
+    ServerMessage(int count, ServerMessageType type)
         : playerCount(count),
           rankings(),
-          isRunning(true) {}
+          isRunning(true),
+          type(type) {}
 
     ServerMessage()
         : playerCount(-1),
