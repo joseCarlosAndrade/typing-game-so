@@ -19,6 +19,7 @@ void Server::readCommands() {
     std::string command;
     while (true) {
         std::cin >> command;
+        // std::cout << command << std::endl;
         if (command == "stop") {
             setGameState(ENDGAME);
             break;
@@ -72,6 +73,22 @@ void Server::start() {
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(PORT);
 
+    // int opt = 1;
+    // if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    //     perror("setsockopt");
+    //     close(serverSocket);
+    //     exit(EXIT_FAILURE);
+    // }
+
+    // struct timeval timeout;
+    // timeout.tv_sec = 1; // 1 seconds
+    // timeout.tv_usec = 0; // 0 microseconds
+    // if (setsockopt(serverSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+    //     perror("setsockopt failed");
+    //     close(serverSocket);
+    //     exit(EXIT_FAILURE);
+    // }
+
     if (bind(serverSocket, (sockaddr *)&serverAddr, sizeof(serverAddr)) < 0) {
         perror("ERROR on binding");
         return;
@@ -93,16 +110,19 @@ void Server::start() {
         int clientSocket = accept(serverSocket, (sockaddr *)&clientAddr, &clientLen);
         if (clientSocket < 0) {
             if (!isRunning) break; // Stop accepting if server is stopping
-            perror("ERROR on accept");
+            perror("Accept timeout");
             continue;
         }
 
         initPlayerData(playerId);
 
+        // handle client port
+        int senderSocket = getPlayerSocket(clientSocket, playerId, clientAddr);
+
         std::cout << "Player " << playerId << " connected." << std::endl;
         playerCount++;
         // Spawn a thread to handle the player
-        threads.emplace_back(&Server::handlePlayer, this, clientSocket, playerId, clientAddr);
+        threads.emplace_back(&Server::receivePlayerData, this, clientSocket, playerId);
 
 
         // Sender socket
@@ -116,13 +136,34 @@ void Server::start() {
         // // addr.sin_port = htons(ntohs(addr.sin_port) + 1); 
         // clientAddr.sin_port = htons(12346); // TODO : no more gambiarra, create a system for the second port
         // socklen_t len = sizeof(clientAddr);
+
+        // int opt = 1;
+        // if (setsockopt(senderSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        //     perror("setsockopt");
+        //     close(senderSocket);
+        //     exit(EXIT_FAILURE);
+        // }
+
+        // struct timeval timeout;
+        // timeout.tv_sec = 1; // 1 seconds
+        // timeout.tv_usec = 0; // 0 microseconds
+        // if (setsockopt(senderSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        //     perror("setsockopt failed");
+        //     close(senderSocket);
+        //     exit(EXIT_FAILURE);
+        // }
+
+
         // std::cout << "Attempting connection to " << clientAddr.sin_addr.s_addr << ":" << ntohs(clientAddr.sin_port) << std::endl;
         // if(connect(senderSocket, (sockaddr *)&clientAddr, len) < 0 ){
         //     perror("ERROR connecting to client");
         //     return;
         // }
+        // std::cout << "Connected to client " << playerId << std::endl;
+        
+        threads.emplace_back(&Server::sendPlayerData, this, senderSocket, playerId);
 
-        // playerConections[playerId] = {clientSocket, senderSocket};
+        playerConections[playerId] = {clientSocket, senderSocket};
 
 
         playerId++;
@@ -134,8 +175,10 @@ void Server::start() {
 
 
 void Server::waitForEndgame() {
+    std::cout << "Wait For Endgame Started\n";
     std::unique_lock<std::mutex> lck(completionTimesMutex);
     completionCV.wait(lck, [this] {return this->playerCount == this->finishedPlayers;});
+    std::cout << "Endgame sequence started\n";
     setGameState(STATES::ENDGAME);
 }
 
@@ -155,12 +198,11 @@ void Server::stop() {
 void Server::receivePlayerData(int clientSocket, int player_id) {
     char buffer[1024];
     while (isRunning) {
-        std::unique_lock<std::mutex> lck(gameStateMutex);
         // This stops the thread from blocking at the recv without busy waiting, because the client only sends one ready message
-        if (gameState == STATES::WAITING_FOR_PLAYERS){
-            gameStateCV.wait(lck, [this, player_id]{return playerReady[player_id];});
-            lck.unlock();
-        }
+        // if (gameState == STATES::WAITING_FOR_PLAYERS){
+        //     gameStateCV.wait(lck, [this, player_id]{return playerReady[player_id];});
+        //     lck.unlock();
+        // }
 
         memset(buffer, 0, sizeof(buffer));
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -197,29 +239,27 @@ void Server::receivePlayerData(int clientSocket, int player_id) {
 // TODO : esse mutex provavelmente fica mto pouco tempo desbloqueado, ent vai dar uns deadlock feio
 // Precisa resolver isso com condition_variable (sleep/wakeup), faco isso amanha
 void Server::sendPlayerData(int clientSocket, int player_id) {
-    std::unique_lock<std::mutex> stateLock(gameStateMutex);
     while (isRunning) {
-
-        switch (gameState) {
-        case STATES::ACCEPTING_CONNECTIONS :
-            // I think no messages are sent in this stage, in case i missed something, just put it here
-        case STATES::WAITING_FOR_PLAYERS :
-            // I think no messages are sent in this stage, in case i missed something, just put it here
-            break;
-        case STATES::GAME_IN_PROGRESS :
+        if (gameState == STATES::GAME_IN_PROGRESS)
             sendRankings(clientSocket, player_id); 
-            break;
-        case STATES::ENDGAME :
-            // Idk if the endgame messages are sent here or in other functions, vou dormir dps penso nessa bomba
-            break;
-        default:
-            break;
-        }
+
+        // switch (gameState) {
+        // case STATES::ACCEPTING_CONNECTIONS :
+        //     // I think no messages are sent in this stage, in case i missed something, just put it here
+        // case STATES::WAITING_FOR_PLAYERS :
+        //     // I think no messages are sent in this stage, in case i missed something, just put it here
+        //     break;
+        // case STATES::GAME_IN_PROGRESS :
+        //     sendRankings(clientSocket, player_id); 
+        //     break;
+        // case STATES::ENDGAME :
+        //     // Idk if the endgame messages are sent here or in other functions, vou dormir dps penso nessa bomba
+        //     break;
+        // default:
+        //     break;
+        // }
         // Signals other waiting thread that it can wakeup
-        // Since its not blocking i hope this thread will often execute the next function
-        messageSendingCV.notify_one();
-        // Blocks the current thread and releases the mutex for other threads
-        messageSendingCV.wait(stateLock, []{return true;}); 
+        // Since its not blocking i hope this thread will often execute the next functio
     }
     close(clientSocket);
 }
@@ -258,11 +298,66 @@ void Server::storePlayerReady(int player_id){
     std::lock_guard<std::mutex> lck(playerReadyMutex);
     playerReady[player_id] = true;
 }
-
+// Not in use anymore
 // Handle a single player (to be substituted)
+// void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
+//     char buffer[1024];
+
+//     int senderSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+//     if (senderSocket < 0) {
+//         perror("ERROR creating socket");
+//         return;
+//     }
+//     // For now, the receiving port of the client is always the next from the sender
+//     // addr.sin_port = htons(ntohs(addr.sin_port) + 1); 
+//     addr.sin_port = htons(12346); // TODO : no more gambiarra, create a system for the second port
+//     socklen_t len = sizeof(addr);
+//     std::cout << "Attempting connection to " << addr.sin_addr.s_addr << ":" << ntohs(addr.sin_port) << std::endl;
+//     if(connect(senderSocket, (sockaddr *)&addr, len) < 0 ){
+//         perror("ERROR connecting to client");
+//         return;
+//     }
+
+//     // Saves to the class map
+//     playerConections[playerId] = {clientSocket, senderSocket};
+
+//     while (isRunning) {
+//         memset(buffer, 0, sizeof(buffer));
+
+//         // constantly tries to receive data from client until it disconnects
+//         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+
+//         if (bytesReceived <= 0) {
+//             std::cout << "Player " << playerId << " disconnected." << std::endl;
+//             playerCount--;
+//             close(clientSocket);
+//             return;
+//         }
+
+//         // Process player's input
+//         std::string input(buffer);
+//         ClientMessage message = ClientMessage::decode(input);
+//         // std::cout << message.data.name << "[" << playerId << "]" << ": " << message.data.score << ", " << message.data.timestamp << std::endl;
+
+//         // Update rankings safely
+//         updateRanking(message.data.name, message.data.score, message.data.timestamp);
+
+//         // Send response to player
+//         // ServerMessage response;
+//         // std::string encodedresponse = response.encode();
+//         // if (send(senderSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
+//         //     std::cerr << "Error sending response to client.\n";
+//         //     break;
+//         // } 
+//             // std::cout << "Response sent to socket " << senderSocket << ": " << encodedresponse << std::endl;
+//     }
+
+//     close(clientSocket);
+// }
 // server calculates which port the client will have to open based on its id
 // and then sends it to them
-void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
+int Server::getPlayerSocket(int clientSocket, int playerId, sockaddr_in addr) {
 
     int newPort = 12345 + playerId + 1;
 
@@ -304,41 +399,43 @@ void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
         return;
     }
 
+    return senderSocket;
+
     // Saves to the class map
-    playerConections[playerId] = {clientSocket, senderSocket};
+    // playerConections[playerId] = {clientSocket, senderSocket};
 
-    while (isRunning) {
-        memset(buffer, 0, sizeof(buffer));
+    // while (isRunning) {
+    //     memset(buffer, 0, sizeof(buffer));
 
-        // constantly tries to receive data from client until it disconnects
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    //     // constantly tries to receive data from client until it disconnects
+    //     int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 
-        if (bytesReceived <= 0) {
-            std::cout << "Player " << playerId << " disconnected." << std::endl;
-            playerCount--;
-            close(clientSocket);
-            return;
-        }
+    //     if (bytesReceived <= 0) {
+    //         std::cout << "Player " << playerId << " disconnected." << std::endl;
+    //         playerCount--;
+    //         close(clientSocket);
+    //         return;
+    //     }
 
-        // Process player's input
-        std::string input(buffer);
-        ClientMessage message = ClientMessage::decode(input);
-        // std::cout << message.data.name << "[" << playerId << "]" << ": " << message.data.score << ", " << message.data.timestamp << std::endl;
+    //     // Process player's input
+    //     std::string input(buffer);
+    //     ClientMessage message = ClientMessage::decode(input);
+    //     // std::cout << message.data.name << "[" << playerId << "]" << ": " << message.data.score << ", " << message.data.timestamp << std::endl;
 
-        // Update rankings safely
-        updateRanking(message.data.name, message.data.score, message.data.timestamp);
+    //     // Update rankings safely
+    //     updateRanking(message.data.name, message.data.score, message.data.timestamp);
 
-        // Send response to player
-        // ServerMessage response;
-        // std::string encodedresponse = response.encode();
-        // if (send(senderSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
-        //     std::cerr << "Error sending response to client.\n";
-        //     break;
-        // } 
-            // std::cout << "Response sent to socket " << senderSocket << ": " << encodedresponse << std::endl;
-    }
+    //     // Send response to player
+    //     // ServerMessage response;
+    //     // std::string encodedresponse = response.encode();
+    //     // if (send(senderSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
+    //     //     std::cerr << "Error sending response to client.\n";
+    //     //     break;
+    //     // } 
+    //         // std::cout << "Response sent to socket " << senderSocket << ": " << encodedresponse << std::endl;
+    // }
 
-    close(clientSocket);
+    // close(clientSocket);
 }
 
 // Sends phrase message to all players
@@ -372,9 +469,9 @@ void Server::sendEndgame() {
         message.rankings = rankings;
         std::string str_m = message.encode();
         if(send(player_conn.second.second, str_m.c_str(), str_m.size(), 0) < 0)
-            std::cerr << "Error sending start to client.\n";
+            std::cerr << "Error sending endgame to client.\n";
         else
-            std::cout << "Start sent to " << player_conn.first << std::endl;
+            std::cout << "Endgame sent to " << player_conn.first << std::endl;
     }
 }
 
