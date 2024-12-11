@@ -51,7 +51,7 @@ private:
 
     std::thread mainThread; // main thread to handle server functions
 
-    int getPlayerSocket(int clientSocket, int playerId, sockaddr_in addr);     // Handle an individual player
+    void handlePlayer(int clientSocket, int playerId, sockaddr_in addr);     // Handle an individual player
     void updateRanking(std::string playerName, int score, int timestamp); // Update a player's ranking
     void printRankings();
     void closeAllThreads(); // Clean up threads
