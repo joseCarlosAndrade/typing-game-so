@@ -160,7 +160,7 @@ void Server::start() {
         //     return;
         // }
         // std::cout << "Connected to client " << playerId << std::endl;
-        
+
         threads.emplace_back(&Server::sendPlayerData, this, senderSocket, playerId);
 
         playerConections[playerId] = {clientSocket, senderSocket};
@@ -365,16 +365,16 @@ int Server::getPlayerSocket(int clientSocket, int playerId, sockaddr_in addr) {
     std::string newPortStr = std::to_string(newPort);
     if (send(clientSocket, newPortStr.c_str(), newPortStr.size(), 0) < 0) {
         std::cerr << "Error sending new port to client.\n";
-        return;
+        return -1;
     } 
 
-    char buffer[1024];
+    // char buffer[1024];
 
     int senderSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (senderSocket < 0) {
         perror("ERROR creating socket");
-        return;
+        return -1;
     }
    
     addr.sin_port = htons(newPort); 
@@ -396,7 +396,7 @@ int Server::getPlayerSocket(int clientSocket, int playerId, sockaddr_in addr) {
     
     if (!success) {
         std::cerr << "Failed to connect to client " << playerId << std::endl;
-        return;
+        return -1 ;
     }
 
     return senderSocket;
