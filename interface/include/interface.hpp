@@ -5,7 +5,6 @@
 #include<SDL2/SDL.h>
 #include<SDL2/SDL_ttf.h>
 #include"keyboard.hpp"
-#include "client.hpp"
 
 #define FONT_SIZE 24
 #define FONT_SPACING 5
@@ -29,8 +28,7 @@ class Interface {
         // loop variables
         bool running, stopWindow;
 
-        // Players that joined in this game
-        vp players;
+
 
         SDL_Window* window;
         SDL_Renderer* renderer;
@@ -41,14 +39,23 @@ class Interface {
         TTF_Font* font;
         int fontsize;
         
-        Keyboard *keyboard;
+        
 
     public:
+
+        bool phrase_recieved;
+        bool game_started;
+        bool ended_game;
+
+        // Players that joined in this game
+        vp players;
+        Keyboard *keyboard;
+
         Interface();
         ~Interface();
 
-        void init(std::string phrase, std::string name);
-        void update(std::string name, Client& client);
+        void init(std::string name);
+        void update();
         void render();
         bool PlayerFinished();
         void handleEvents();

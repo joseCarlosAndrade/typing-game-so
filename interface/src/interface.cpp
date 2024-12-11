@@ -12,13 +12,16 @@ Interface::Interface()
     : FPS(60), running(false), stopWindow(false), window(nullptr), renderer(nullptr), font(nullptr), fontsize(FONT_SIZE) {
     
     //    keyboard = Keyboard(100, 100, 10, 24);
+    phrase_recieved = false;
+    game_started = false;
+    ended_game = false;
 }
 
 Interface::~Interface() {
     clean();
 }
 
-void Interface::init(std::string phrase, std::string name) {
+void Interface::init(std::string name) {
 
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         std::cerr << "SDL Initialization failed: " << SDL_GetError() << std::endl;
@@ -64,39 +67,14 @@ void Interface::init(std::string phrase, std::string name) {
     myplayer.name = name;
     players.push_back(myplayer);
 
-    Player second_player;
-    SDL_Color c2 = {255, 0, 255, 0};
-    second_player.last_correct_index = 0;
-    second_player.actual_index = 0;
-    second_player.color = c2;
-    second_player.name = "JoseRuim";
-    players.push_back(second_player);
-
-
-    // ser the phrase to be typed in the interface
-    setPhrase(phrase);
-
     running = true;
 }
 
-void Interface::update(std::string name, Client& client) {
+void Interface::update() {
     // Update game logic here
     // will add players to the vector or remove
-
     players[0].last_correct_index = keyboard->last_correct_index;
     players[0].actual_index = keyboard->get_last_index();
-
-    // send data to the server
-    ClientMessage message(name, keyboard->last_correct_index);
-    std::string encodedMessage = message.encode();
-    client.sendData(encodedMessage);
-
-    // need to receive data from the server
-    // client.receiveUpdates();
-
-
-
-
 
 }
 
@@ -111,14 +89,19 @@ void Interface::render() {
     std::string phrase = keyboard->get_phrase();
 
     draw_rectangle_limits();
-    renderPhrase(phrase);
-    renderTypedText();
 
-    renderRank(this->players);
-    
-    for (int i = 0; i < int(players.size()); i++){
-        renderPlayerPosition(&players[i], players[i].last_correct_index);
+    if (phrase_recieved)
+        renderPhrase(phrase);
+    if (game_started){
+        renderTypedText();
+        renderRank(this->players);
+        for (int i = 0; i < int(players.size()); i++){
+            renderPlayerPosition(&players[i], players[i].last_correct_index);
+        }
     }
+
+    
+
 
 
     SDL_RenderPresent(renderer);
@@ -140,7 +123,7 @@ void Interface::handleEvents() {
                 if (key == SDLK_ESCAPE) {
                     running = false;
 
-                } else if (!PlayerFinished()) {
+                } else if (!PlayerFinished() && game_started && phrase_recieved && !ended_game) {
                     if (key >= SDLK_a && key <= SDLK_z) {
                         char letter = key - SDLK_a + 'A'; // convert to uppercase
                         keyboard->insert_letter(letter);
@@ -175,8 +158,10 @@ bool Interface::isRunning() {
 }
 
 bool Interface::PlayerFinished(){
-    if (keyboard->last_correct_index == (int(phrase.size())))
+    if (keyboard->last_correct_index == (int(phrase.size()))){
+        ended_game = true;
         return true;
+    }
     return false;
 }
 
