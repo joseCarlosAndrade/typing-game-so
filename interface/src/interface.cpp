@@ -392,6 +392,8 @@ void Interface::renderPlayerPosition(Player * player, int index){
 void Interface::renderRank(vp players){
     int h = height - 2 * (fontsize + FONT_SPACING);
     for (int i = 0; i < int(players.size()); i++, h = h - 2 * (fontsize + FONT_SPACING)){
+        if ((players[i].name == "") || (players[i].name == " "))
+            continue;
         int progress = 100*(float(players[i].last_correct_index)/float(phrase.size()));
         std::string progress_str = std::to_string(progress);
         std::string name = players[i].name;
@@ -409,3 +411,4 @@ void Interface::renderRank(vp players){
         letter_screen_pos++;
     }
 }
+

@@ -228,7 +228,7 @@ void Client::receiveUpdates(int receivePort) {
                     p.actual_index = 0;
                     p.color = c;
                     p.name = data.first;
-                    if (p.name == interface.players[0].name)
+                    if ((p.name == interface.players[0].name) || (p.name == " "))
                         continue;
                     interface.players.push_back(p);
                 }
