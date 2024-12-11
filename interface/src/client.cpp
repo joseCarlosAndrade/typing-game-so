@@ -186,6 +186,7 @@ void Client::receiveUpdates(int receivePort) {
 
     while(!stopReceiver){
         char buffer[1024];
+        memset(buffer, 0, sizeof(buffer));
         
         std::cout << "[RECEIVER] waiting for message..\n";
         int bytesReceived = recv(recvSocket, buffer, sizeof(buffer) - 1, 0);
@@ -206,9 +207,12 @@ void Client::receiveUpdates(int receivePort) {
         switch (message.type) {
             case ServerMessage::ServerMessageType::PHRASE:
 
+                if (interface.phrase_recieved == true) break;
+
                 std::cout << "phrase received\n";
                 std::cout <<"phrase: " << message.phrase << std::endl;
-
+                
+                
                 interface.phrase_recieved = true;
                 interface.setPhrase(message.phrase);
                 break;
@@ -241,6 +245,15 @@ void Client::receiveUpdates(int receivePort) {
                         continue;
 
                     // updates the score of each player
+                    if (int(interface.players.size()) == i){ //TODO: ZERO ISSO AQUI DEVE TA ERRADO
+                        // COLOQUEI ISSO PQ PLAYERS NAO TA INICIALIZADO   
+                        Player p;
+                        SDL_Color c = {255, 255, 255, 255};
+                        p.last_correct_index = 0;
+                        p.actual_index = 0;
+                        p.color = c;
+                        interface.players.push_back(p);
+                    }
                     interface.players[i].last_correct_index = data.second.first;
                     // updates the name of the players in 1st, 2nd, ...
                     interface.players[i].name = data.first;
