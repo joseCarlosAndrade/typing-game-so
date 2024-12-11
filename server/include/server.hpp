@@ -23,15 +23,30 @@ private:
 
     STATES gameState; 
 
+    int playerCount = 0;
+    std::string phrase = std::string("shogo eh bobalhao"); // Target string
+
+
+    std::map<int, bool> playerReady; // Stores if a player has sent the ready message
+    std::mutex playerReadyMutex; // playerReady mutex
+
     std::multimap<std::string, std::pair<int, int>> rankings; // {{score, timestamp}, name}
     std::map<std::string, int> playerScores;  // Player name to score map for quick lookups
     std::mutex rankingsMutex;              // Mutex to protect rankings
 
     std::mutex gameStateMutex;
+    std::condition_variable gameStateCV; // Blocks treads in game states when its needed
 
-    std::map<int, std::pair<int, int>> playerConections; //PlayerID -> player socket{sender, receiver}
+
+    // End game management
+    std::map<int, int> completionTimes; // {id, last timestamps}
+    std::mutex completionTimesMutex;
+    int finishedPlayers = 0;
+
+    std::map<int, std::pair<int, int>> playerConections; //PlayerID -> player socket{receiver, sender}
 
     std::vector<std::thread> threads; // Threads for handling clients
+    
 
     std::thread mainThread; // main thread to handle server functions
 
@@ -40,7 +55,12 @@ private:
     void printRankings();
     void closeAllThreads(); // Clean up threads
     void closeSocket();     // Close the server socket
-
+    void receivePlayerData(int clientSocket, int player_id); // Manages the receiving of a clients messages
+    void sendPlayerData(int clientSocket, int player_id); // Mangaes sending messages to clients
+    void storePlayerReady(int player_id); // Thread safely stores the ready state of a player
+    void storePlayerDone(int player_id, int timestamp); // Thread safely stores the finished state of a player
+    void initPlayerData(int player_id);  // Initializes some map records so not to cause crashes
+    void sendRankings(int clientSocket, int player_id);
 
 public:
     explicit Server(int portno = 12345); // Constructor with default port
@@ -50,6 +70,7 @@ public:
     void start();                        // Start the server
     void stop();                         // Stop the server
     void setGameState(STATES state);
+    void sendPhrase();
     std::atomic<bool> isRunning; // Flag to indicate if the server is running
 
 };
