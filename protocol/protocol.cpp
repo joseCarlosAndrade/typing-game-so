@@ -41,7 +41,6 @@ ServerMessage ServerMessage::decode(const std::string &data) {
     std:: string temps;
     iss >> temp1;
     in_type = ServerMessageType(temp1);
-    int count;
     ServerMessage message;
     message.type = in_type;
 
@@ -111,11 +110,10 @@ std::string ClientMessage::encode() {
 ClientMessage ClientMessage::decode(const std::string &data) {
     std::istringstream iss(data);
     ClientMessageType in_type;
-    int temp1, temp2;
+    int temp1;
     std:: string temps;
     iss >> temp1;
     in_type = ClientMessageType(temp1);
-    int count;
     ClientMessage message(in_type);
      switch (in_type)
     {
