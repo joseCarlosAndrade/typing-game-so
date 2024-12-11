@@ -268,6 +268,10 @@ void Server::sendPlayerData(int clientSocket, int player_id) {
 void Server::sendRankings(int clientSocket, int player_id) {
     std::unique_lock<std::mutex> rankLock(rankingsMutex);
     // ServerMessage message(playerCount, rankings, "", ServerMessage::ServerMessageType::RANKING);
+    std::cout << "Rankings:" << std::endl;
+    for(auto data : rankings){
+        std::cout << data.first << " " << data.second.first << " " << data.second.second << std::endl;
+    }
     ServerMessage message;
     message.playerCount = playerCount;
     message.rankings = rankings;
@@ -479,6 +483,10 @@ void Server::sendEndgame() {
 // Update rankings thread-safely
 void Server::updateRanking(std::string playerName, int score, int timestamp) {
     std::lock_guard<std::mutex> lock(rankingsMutex);
+
+
+
+
 
     // Remove old score from the multimap
     auto it = playerScores.find(playerName);

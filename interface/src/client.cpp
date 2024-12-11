@@ -237,6 +237,10 @@ void Client::receiveUpdates(int receivePort) {
 
             case ServerMessage::ServerMessageType::RANKING: {
                 int i = 1;
+                std::cout << "Rankings:" << std::endl;
+                for(auto data : message.rankings){
+                    std::cout << data.first << " " << data.second.first << " " << data.second.second << std::endl;
+                }
                 // receives a ranking list of the players
                 for(auto data : message.rankings){
 
