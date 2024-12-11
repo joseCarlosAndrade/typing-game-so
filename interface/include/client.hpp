@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "protocol.hpp"
+#include "interface.hpp"
 
 class Client {
 private:
@@ -54,7 +55,10 @@ public:
     ~Client();
     int connectToServer();
     void sendData(std::string data);
+    void sendPosition();
     void receiveUpdates();
+
+    Interface interface;
 };
 
 #endif
