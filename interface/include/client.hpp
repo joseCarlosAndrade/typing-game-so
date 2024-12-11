@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "protocol.hpp"
+#include "interface.hpp"
 
 class Client {
 private:
@@ -30,7 +31,7 @@ private:
 
     // Player rankings
     std::mutex rankingMutex;
-    std::multimap<std::string, std::pair<int, int>> rankings;
+    std::multimap<std::pair<int, int>, std::string> rankings;
 
     void processQueue() {
         while (true) {
@@ -54,7 +55,10 @@ public:
     ~Client();
     int connectToServer();
     void sendData(std::string data);
+    void sendPosition();
     void receiveUpdates();
+
+    Interface interface;
 };
 
 #endif
