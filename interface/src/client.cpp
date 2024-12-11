@@ -1,6 +1,9 @@
 #include "../include/client.hpp"
 
-Client::Client(const std::string &ip, int portno) : serverIP(ip), senderPORT(portno), receivePORT(portno+1) {}
+// #include <fcntl.h>
+
+
+Client::Client(const std::string &ip, int portno) : serverIP(ip), senderPORT(portno), receivePORT(0) {}
 
 Client::~Client() {
     {
@@ -67,9 +70,7 @@ int Client::connectToServer() {
         return -1;
     }
 
-    senderThread = std::thread(&Client::processQueue, this);
-
-    receiverThread = std::thread(&Client::receiveUpdates, this);
+    
 
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
@@ -86,6 +87,24 @@ int Client::connectToServer() {
     }
 
     std::cout << "Connected to the server at " << serverIP << ":" << senderPORT << std::endl;
+
+    // receives a message from the server with the correct port to open
+    char buffer[1024];
+    int bytesReceived = recv(senderSocket, buffer, sizeof(buffer) - 1, 0);
+    if (bytesReceived <= 0) {
+        perror("ERROR receiving port from server");
+        close(senderSocket);
+        EXIT_FAILURE;
+    }
+
+    receivePORT = std::stoi(buffer);
+
+    std::cout << "Received port " << receivePORT << " from server" << std::endl;
+
+    senderThread = std::thread(&Client::processQueue, this);
+
+    receiverThread = std::thread(&Client::receiveUpdates, this, receivePORT);
+
     return 0;
 }
 
@@ -105,8 +124,15 @@ void Client::sendPosition(){
 
 
 // TODO : close sockets correctly, create a real system for the second port
-void Client::receiveUpdates() {
+void Client::receiveUpdates(int receivePort) {
     std::cout << "Receiving thread started" << std::endl;
+
+    if (receivePort == 0) {
+        std::cout << "ERROR: receive port not set" << std::endl;
+        return;
+    }
+
+    std::cout << "[RECEIVER] opening socket on port " << receivePort << std::endl;
 
     receivingSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (receivingSocket < 0){
@@ -115,7 +141,7 @@ void Client::receiveUpdates() {
     }
     sockaddr_in recv_addr {};
     recv_addr.sin_family = AF_INET;
-    recv_addr.sin_port = htons(receivePORT);
+    recv_addr.sin_port = htons(receivePort);
     recv_addr.sin_addr.s_addr = INADDR_ANY;
 
     int opt = 1;
@@ -134,12 +160,15 @@ void Client::receiveUpdates() {
         exit(EXIT_FAILURE);
     }
 
+    // int flags = fcntl(receivingSocket, F_GETFL, 0);
+    // fcntl(receivingSocket, F_SETFL, flags & ~O_NONBLOCK);
+
     if(bind(receivingSocket, (sockaddr *)&recv_addr, (socklen_t)sizeof(recv_addr)) < 0){
         perror("ERROR on binding");
         return;
     }
 
-    if(listen(receivingSocket, 5) < 0){
+    if(listen(receivingSocket, 10) < 0){
         perror("ERROR on listening");
         return;
     }
@@ -163,7 +192,7 @@ void Client::receiveUpdates() {
         std::cout << "[RECEIVER] ..message received\n";
 
         if (bytesReceived <= 0){
-            std::cout << "Lost connection to server" << std::endl;
+            // std::cout << "Lost connection to server" << std::endl;
             // break;
             continue;
         }

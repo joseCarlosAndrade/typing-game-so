@@ -260,7 +260,19 @@ void Server::storePlayerReady(int player_id){
 }
 
 // Handle a single player (to be substituted)
+// server calculates which port the client will have to open based on its id
+// and then sends it to them
 void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
+
+    int newPort = 12345 + playerId + 1;
+
+    // send new port to client
+    std::string newPortStr = std::to_string(newPort);
+    if (send(clientSocket, newPortStr.c_str(), newPortStr.size(), 0) < 0) {
+        std::cerr << "Error sending new port to client.\n";
+        return;
+    } 
+
     char buffer[1024];
 
     int senderSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -269,13 +281,26 @@ void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
         perror("ERROR creating socket");
         return;
     }
-    // For now, the receiving port of the client is always the next from the sender
-    // addr.sin_port = htons(ntohs(addr.sin_port) + 1); 
-    addr.sin_port = htons(12346); // TODO : no more gambiarra, create a system for the second port
+   
+    addr.sin_port = htons(newPort); 
     socklen_t len = sizeof(addr);
     std::cout << "Attempting connection to " << addr.sin_addr.s_addr << ":" << ntohs(addr.sin_port) << std::endl;
-    if(connect(senderSocket, (sockaddr *)&addr, len) < 0 ){
-        perror("ERROR connecting to client");
+    
+    int attempts = 3;
+    bool success = false;
+    while (attempts-- > 0) {
+        if(connect(senderSocket, (sockaddr *)&addr, len) < 0 ){
+            perror("ERROR connecting to client");
+            // sleep for a bit
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        } else {
+            success = true;
+            break;
+        }
+    }
+    
+    if (!success) {
+        std::cerr << "Failed to connect to client " << playerId << std::endl;
         return;
     }
 

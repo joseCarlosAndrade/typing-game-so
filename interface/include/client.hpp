@@ -56,7 +56,7 @@ public:
     int connectToServer();
     void sendData(std::string data);
     void sendPosition();
-    void receiveUpdates();
+    void receiveUpdates(int receivePort);
 
     void clean();
 
