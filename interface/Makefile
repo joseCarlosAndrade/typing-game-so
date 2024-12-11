@@ -1,4 +1,4 @@
-CPP_FLAGS=-ggdb -Wall -Werror -Wextra -Iinclude -I../protocol
+CPP_FLAGS=-ggdb -Wall -Werror -Wextra -Iinclude -I../protocol -g
 SDL_FLAGS=-lSDL2 -lSDL2_ttf
 THREAD_FLAGS=-pthread
 

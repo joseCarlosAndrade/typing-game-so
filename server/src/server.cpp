@@ -24,11 +24,16 @@ void Server::readCommands() {
             break;
         } else if (command == "print") {
             printRankings();
-        } else if (command == "start") {
+        } else if (command == "phrase") {
             setGameState(WAITING_FOR_PLAYERS);
             // start this thread!
-            std::cout << "Waiting for players." << std::endl;
+            std::cout << "Phrase sent. Waiting for players." << std::endl;
             
+        } else if (command == "start") {
+            setGameState(GAME_IN_PROGRESS);
+            std::cout << "Game started." << std::endl;
+        } else {
+            std::cout << "Invalid command." << std::endl;
         }
     }
 }
@@ -101,23 +106,23 @@ void Server::start() {
 
 
         // Sender socket
-        int senderSocket = socket(AF_INET, SOCK_STREAM, 0);
+        // int senderSocket = socket(AF_INET, SOCK_STREAM, 0);
 
-        if (senderSocket < 0) {
-            perror("ERROR creating socket");
-            return;
-        }
-        // For now, the receiving port of the client is always the next from the sender
-        // addr.sin_port = htons(ntohs(addr.sin_port) + 1); 
-        clientAddr.sin_port = htons(12346); // TODO : no more gambiarra, create a system for the second port
-        socklen_t len = sizeof(clientAddr);
-        std::cout << "Attempting connection to " << clientAddr.sin_addr.s_addr << ":" << ntohs(clientAddr.sin_port) << std::endl;
-        if(connect(senderSocket, (sockaddr *)&clientAddr, len) < 0 ){
-            perror("ERROR connecting to client");
-            return;
-        }
+        // if (senderSocket < 0) {
+        //     perror("ERROR creating socket");
+        //     return;
+        // }
+        // // For now, the receiving port of the client is always the next from the sender
+        // // addr.sin_port = htons(ntohs(addr.sin_port) + 1); 
+        // clientAddr.sin_port = htons(12346); // TODO : no more gambiarra, create a system for the second port
+        // socklen_t len = sizeof(clientAddr);
+        // std::cout << "Attempting connection to " << clientAddr.sin_addr.s_addr << ":" << ntohs(clientAddr.sin_port) << std::endl;
+        // if(connect(senderSocket, (sockaddr *)&clientAddr, len) < 0 ){
+        //     perror("ERROR connecting to client");
+        //     return;
+        // }
 
-        playerConections[playerId] = {clientSocket, senderSocket};
+        // playerConections[playerId] = {clientSocket, senderSocket};
 
 
         playerId++;
@@ -293,19 +298,19 @@ void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
         // Process player's input
         std::string input(buffer);
         ClientMessage message = ClientMessage::decode(input);
-        std::cout << message.data.name << "[" << playerId << "]" << ": " << message.data.score << ", " << message.data.timestamp << std::endl;
+        // std::cout << message.data.name << "[" << playerId << "]" << ": " << message.data.score << ", " << message.data.timestamp << std::endl;
 
         // Update rankings safely
         updateRanking(message.data.name, message.data.score, message.data.timestamp);
 
         // Send response to player
-        ServerMessage response;
-        std::string encodedresponse = response.encode();
-        if (send(senderSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
-            std::cerr << "Error sending response to client.\n";
-            break;
-        } else
-            std::cout << "Response sent to socket " << senderSocket << ": " << encodedresponse << std::endl;
+        // ServerMessage response;
+        // std::string encodedresponse = response.encode();
+        // if (send(senderSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
+        //     std::cerr << "Error sending response to client.\n";
+        //     break;
+        // } 
+            // std::cout << "Response sent to socket " << senderSocket << ": " << encodedresponse << std::endl;
     }
 
     close(clientSocket);
@@ -314,7 +319,7 @@ void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
 // Sends phrase message to all players
 void Server::sendPhrase() {
     for (auto player_conn : playerConections) {
-        std::string message =  ServerMessage(playerCount, ServerMessage::ServerMessageType::PHRASE).encode();
+        std::string message =  ServerMessage(playerCount, "testphrase", ServerMessage::ServerMessageType::PHRASE).encode();
         if(send(player_conn.second.second, message.c_str(), message.size(), 0) < 0)
             std::cerr << "Error sending phrase to client.\n";
         else
@@ -370,7 +375,7 @@ void Server::updateRanking(std::string playerName, int score, int timestamp) {
 
     // Insert the updated score into the multimap
     rankings.insert({playerName, {score, timestamp}});
-    std::cout << "Player " << playerName << "'s score updated to " << score << std::endl;
+    // std::cout << "Player " << playerName << "'s score updated to " << score << std::endl;
 }
 
 void Server::printRankings() {

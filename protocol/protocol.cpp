@@ -16,6 +16,7 @@ std::string ServerMessage::encode() {
         break;
     
     case ServerMessageType::PHRASE :
+        std::cout << "encapsulating phrase: " << phrase << std::endl;
         oss << playerCount << " " << phrase;
         break;
 

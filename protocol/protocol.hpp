@@ -18,13 +18,13 @@ struct PlayerData {
 
 class ServerMessage {
 public:
-    enum ServerMessageType {PHRASE, START, RANKING, END_GAME}; // 0, 1, 2, 3
+    enum ServerMessageType {PHRASE =1, START, RANKING, END_GAME}; // 0, 1, 2, 3
 
     int playerCount;
     std::multimap<std::string, std::pair<int, int>> rankings; // {{score, timestamp}, name}
     bool isRunning;
-    ServerMessageType type;
     std::string phrase;
+    ServerMessageType type;
 
     // P causa do -Werror tinha uns warning estanho, ai p compilar eu tirei esse constructor q so usava uma vez tbm
     // Constructor
@@ -39,6 +39,13 @@ public:
         : playerCount(count),
           rankings(),
           isRunning(true),
+          type(type) {}
+    
+    ServerMessage(int countm, std::string phrase, ServerMessageType type)
+        : playerCount(countm),
+          rankings(),
+          isRunning(true),
+          phrase(phrase),
           type(type) {}
 
     ServerMessage()

@@ -15,6 +15,7 @@ Interface::Interface()
     phrase_recieved = false;
     game_started = false;
     ended_game = false;
+    phrase = "";
 }
 
 Interface::~Interface() {
@@ -158,7 +159,9 @@ bool Interface::isRunning() {
 }
 
 bool Interface::PlayerFinished(){
-    if (keyboard->last_correct_index == (int(phrase.size()))){
+    int p_size = int(phrase.size());
+
+    if (p_size > 0 && keyboard->last_correct_index == (p_size)){
         ended_game = true;
         return true;
     }
