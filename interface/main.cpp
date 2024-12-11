@@ -20,16 +20,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    Interface interface;
-    interface.init("Shogo eh um bobalhao Shogo eh um bobalhao Shogo eh um bobalhao Shogo eh um bobalhao", argv[1]);
+    client.interface.init(argv[1]);
 
-    while (interface.isRunning()) {
-        interface.handleEvents();
-        interface.update(argv[1], client);
-        interface.render();
+    while (client.interface.isRunning()) {
+        client.interface.handleEvents();
+        client.interface.update();
+        client.sendPosition();
+        client.interface.render();
     }
 
-    interface.clean();
+    client.interface.clean();
 
     return 0;
 }
