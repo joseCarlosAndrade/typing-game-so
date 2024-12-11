@@ -36,12 +36,13 @@ private:
 
     std::mutex gameStateMutex;
     std::condition_variable gameStateCV; // Blocks treads in game states when its needed
-
+    std::condition_variable messageSendingCV; // CV to avoid deadlocks in message sending
 
     // End game management
     std::map<int, int> completionTimes; // {id, last timestamps}
     std::mutex completionTimesMutex;
     int finishedPlayers = 0;
+    std::condition_variable completionCV;
 
     std::map<int, std::pair<int, int>> playerConections; //PlayerID -> player socket{receiver, sender}
 
@@ -60,7 +61,10 @@ private:
     void storePlayerReady(int player_id); // Thread safely stores the ready state of a player
     void storePlayerDone(int player_id, int timestamp); // Thread safely stores the finished state of a player
     void initPlayerData(int player_id);  // Initializes some map records so not to cause crashes
-    void sendRankings(int clientSocket, int player_id);
+    void sendRankings(int clientSocket, int player_id); // Wrapper to build the ranking message
+    void sendStart(); // Sends start message to all players
+    void sendEndgame(); // Sends endgame message to all players
+    void waitForEndgame(); // Runs as thread a function to await for all players to send the done message
 
 public:
     explicit Server(int portno = 12345); // Constructor with default port
