@@ -38,10 +38,20 @@ void Server::readCommands() {
 void Server::setGameState(STATES state){
     std::lock_guard<std::mutex> lock(gameStateMutex);
     gameState = state;
+    
+
+    if (state ==  STATES::WAITING_FOR_PLAYERS) {
+        sendPhrase();
+    }
     // Unlocks the threads awaiting for the game to start
-    if (state ==  STATES::GAME_IN_PROGRESS)
+    if (state ==  STATES::GAME_IN_PROGRESS) {
+        sendStart();
         gameStateCV.notify_all();
-    sendPhrase();
+    }
+    if (state == STATES::ENDGAME) {
+        sendEndgame();
+    }
+
 }
 
 // Start the server
@@ -117,6 +127,14 @@ void Server::start() {
     closeSocket();
 }
 
+
+void Server::waitForEndgame() {
+    std::unique_lock<std::mutex> lck(completionTimesMutex);
+    completionCV.wait(lck, [this] {return this->playerCount == this->finishedPlayers;});
+    setGameState(STATES::ENDGAME);
+}
+
+
 // Stop the server gracefully
 void Server::stop() {
     if (isRunning) {
@@ -174,11 +192,8 @@ void Server::receivePlayerData(int clientSocket, int player_id) {
 // TODO : esse mutex provavelmente fica mto pouco tempo desbloqueado, ent vai dar uns deadlock feio
 // Precisa resolver isso com condition_variable (sleep/wakeup), faco isso amanha
 void Server::sendPlayerData(int clientSocket, int player_id) {
+    std::unique_lock<std::mutex> stateLock(gameStateMutex);
     while (isRunning) {
-        std::unique_lock<std::mutex> stateLock(gameStateMutex);
-
-
-
 
         switch (gameState) {
         case STATES::ACCEPTING_CONNECTIONS :
@@ -187,8 +202,7 @@ void Server::sendPlayerData(int clientSocket, int player_id) {
             // I think no messages are sent in this stage, in case i missed something, just put it here
             break;
         case STATES::GAME_IN_PROGRESS :
-            sendRankings(clientSocket, player_id);
-            stateLock.unlock(); 
+            sendRankings(clientSocket, player_id); 
             break;
         case STATES::ENDGAME :
             // Idk if the endgame messages are sent here or in other functions, vou dormir dps penso nessa bomba
@@ -196,6 +210,11 @@ void Server::sendPlayerData(int clientSocket, int player_id) {
         default:
             break;
         }
+        // Signals other waiting thread that it can wakeup
+        // Since its not blocking i hope this thread will often execute the next function
+        messageSendingCV.notify_one();
+        // Blocks the current thread and releases the mutex for other threads
+        messageSendingCV.wait(stateLock, []{return true;}); 
     }
     close(clientSocket);
 }
@@ -292,7 +311,7 @@ void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
     close(clientSocket);
 }
 
-
+// Sends phrase message to all players
 void Server::sendPhrase() {
     for (auto player_conn : playerConections) {
         std::string message =  ServerMessage(playerCount, ServerMessage::ServerMessageType::PHRASE).encode();
@@ -302,6 +321,31 @@ void Server::sendPhrase() {
             std::cout << "Phrase sent to " << player_conn.first << std::endl;
     }
 
+}
+
+// Sends start message to all players
+void Server::sendStart() {
+    for (auto player_conn : playerConections) {
+        std::string message =  ServerMessage(playerCount, ServerMessage::ServerMessageType::START).encode();
+        if(send(player_conn.second.second, message.c_str(), message.size(), 0) < 0)
+            std::cerr << "Error sending start to client.\n";
+        else
+            std::cout << "Start sent to " << player_conn.first << std::endl;
+    }
+
+}
+
+void Server::sendEndgame() {
+    for (auto player_conn : playerConections) {
+        ServerMessage message =  ServerMessage(playerCount, ServerMessage::ServerMessageType::END_GAME);
+        std::unique_lock<std::mutex> lck(rankingsMutex);
+        message.rankings = rankings;
+        std::string str_m = message.encode();
+        if(send(player_conn.second.second, str_m.c_str(), str_m.size(), 0) < 0)
+            std::cerr << "Error sending start to client.\n";
+        else
+            std::cout << "Start sent to " << player_conn.first << std::endl;
+    }
 }
 
 // this doesnt look efficient, should be changed, but if it works... 
