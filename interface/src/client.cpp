@@ -1,4 +1,4 @@
-#include "client.hpp"
+#include "../include/client.hpp"
 
 Client::Client(const std::string &ip, int portno) : serverIP(ip), senderPORT(portno), receivePORT(portno+1) {}
 
@@ -10,6 +10,11 @@ Client::~Client() {
     queueCV.notify_all();
     if (senderThread.joinable()) {
         senderThread.join();
+    }
+
+    if (receiverThread.joinable()) {
+        stopReceiver = true;
+        receiverThread.join();
     }
 
     close(senderSocket);
@@ -61,6 +66,8 @@ void Client::sendPosition(){
 
 // TODO : close sockets correctly, create a real system for the second port
 void Client::receiveUpdates() {
+    std::cout << "Receiving thread started" << std::endl;
+
     receivingSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (receivingSocket < 0){
         perror("ERROR opening receiving socket");
@@ -94,22 +101,33 @@ void Client::receiveUpdates() {
 
     while(!stopReceiver){
         char buffer[1024];
+        
+        std::cout << "waiting for message..\n";
         int bytesReceived = recv(recvSocket, buffer, sizeof(buffer) - 1, 0);
+        std::cout << "..message received\n";
 
         if (bytesReceived <= 0){
             std::cout << "Lost connection to server" << std::endl;
         }
 
         ServerMessage message = ServerMessage::decode(std::string(buffer));
+
+        std::cout << "msg received\n";
+        std::cout << "msg type: " << message.type << std::endl;
         
-        std::cout << "a\n";
+        //std::cout << "a\n"; 
         switch (message.type) {
             case ServerMessage::ServerMessageType::PHRASE:
+
+                std::cout << "phrase received\n";
+                std::cout <<"phrase: " << message.phrase << std::endl;
+
                 interface.phrase_recieved = true;
                 interface.setPhrase(message.phrase);
                 break;
 
             case ServerMessage::ServerMessageType::START:
+                std::cout << "game started\n";
 
                 // creates a Player for each one received via message, but not the player related to this client, that one is create in interface.init
                 for(auto data : message.rankings){
@@ -159,6 +177,9 @@ void Client::receiveUpdates() {
         rankLock.unlock();
         std::cout << "Score updated" << std::endl;
     }
-    close(recvSocket);
 
+    std::cout << "Closing receiving socket" << std::endl;
+    close(recvSocket);
+    close(receivingSocket);
 }
+
