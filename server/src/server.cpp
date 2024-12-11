@@ -38,6 +38,10 @@ void Server::readCommands() {
 void Server::setGameState(STATES state){
     std::lock_guard<std::mutex> lock(gameStateMutex);
     gameState = state;
+    // Unlocks the threads awaiting for the game to start
+    if (state ==  STATES::GAME_IN_PROGRESS)
+        gameStateCV.notify_all();
+    sendPhrase();
 }
 
 // Start the server
@@ -78,10 +82,35 @@ void Server::start() {
             continue;
         }
 
-        std::cout << "Player " << playerId << " connected." << std::endl;
+        initPlayerData(playerId);
 
+        std::cout << "Player " << playerId << " connected." << std::endl;
+        playerCount++;
         // Spawn a thread to handle the player
-        threads.emplace_back(&Server::handlePlayer, this, clientSocket, playerId++, clientAddr);
+        threads.emplace_back(&Server::handlePlayer, this, clientSocket, playerId, clientAddr);
+
+
+        // Sender socket
+        int senderSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+        if (senderSocket < 0) {
+            perror("ERROR creating socket");
+            return;
+        }
+        // For now, the receiving port of the client is always the next from the sender
+        // addr.sin_port = htons(ntohs(addr.sin_port) + 1); 
+        clientAddr.sin_port = htons(12346); // TODO : no more gambiarra, create a system for the second port
+        socklen_t len = sizeof(clientAddr);
+        std::cout << "Attempting connection to " << clientAddr.sin_addr.s_addr << ":" << ntohs(clientAddr.sin_port) << std::endl;
+        if(connect(senderSocket, (sockaddr *)&clientAddr, len) < 0 ){
+            perror("ERROR connecting to client");
+            return;
+        }
+
+        playerConections[playerId] = {clientSocket, senderSocket};
+
+
+        playerId++;
     }
 
     closeAllThreads();
@@ -98,7 +127,115 @@ void Server::stop() {
     }
 }
 
-// Handle a single player
+
+// Handles incoming client messsages
+void Server::receivePlayerData(int clientSocket, int player_id) {
+    char buffer[1024];
+    while (isRunning) {
+        std::unique_lock<std::mutex> lck(gameStateMutex);
+        // This stops the thread from blocking at the recv without busy waiting, because the client only sends one ready message
+        if (gameState == STATES::WAITING_FOR_PLAYERS){
+            gameStateCV.wait(lck, [this, player_id]{return playerReady[player_id];});
+            lck.unlock();
+        }
+
+        memset(buffer, 0, sizeof(buffer));
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+
+        if (bytesReceived <= 0) {
+            std::cout << "Player " << player_id << " disconnected." << std::endl;
+            playerCount--;
+            playerConections.erase(playerConections.find(player_id));
+            close(clientSocket);
+            return;
+        }
+
+        ClientMessage message = ClientMessage::decode(std::string(buffer));
+
+        switch (message.type) {
+            case ClientMessage::ClientMessageType::READY :
+                storePlayerReady(player_id);
+                break;
+            case ClientMessage::ClientMessageType::PROGRESS :
+                updateRanking(message.data.name, message.data.score, message.data.timestamp);
+                break;
+            case ClientMessage::ClientMessageType::DONE :
+                storePlayerDone(player_id, message.data.timestamp);
+                break;
+        default:
+            break;
+        }
+    }
+    close(clientSocket);
+    
+}
+
+
+// TODO : esse mutex provavelmente fica mto pouco tempo desbloqueado, ent vai dar uns deadlock feio
+// Precisa resolver isso com condition_variable (sleep/wakeup), faco isso amanha
+void Server::sendPlayerData(int clientSocket, int player_id) {
+    while (isRunning) {
+        std::unique_lock<std::mutex> stateLock(gameStateMutex);
+
+
+
+
+        switch (gameState) {
+        case STATES::ACCEPTING_CONNECTIONS :
+            // I think no messages are sent in this stage, in case i missed something, just put it here
+        case STATES::WAITING_FOR_PLAYERS :
+            // I think no messages are sent in this stage, in case i missed something, just put it here
+            break;
+        case STATES::GAME_IN_PROGRESS :
+            sendRankings(clientSocket, player_id);
+            stateLock.unlock(); 
+            break;
+        case STATES::ENDGAME :
+            // Idk if the endgame messages are sent here or in other functions, vou dormir dps penso nessa bomba
+            break;
+        default:
+            break;
+        }
+    }
+    close(clientSocket);
+}
+
+// Encapsulates the action of sending ranking messages
+void Server::sendRankings(int clientSocket, int player_id) {
+    std::unique_lock<std::mutex> rankLock(rankingsMutex);
+    // ServerMessage message(playerCount, rankings, "", ServerMessage::ServerMessageType::RANKING);
+    ServerMessage message;
+    message.playerCount = playerCount;
+    message.rankings = rankings;
+    message.type = ServerMessage::ServerMessageType::RANKING;
+    std::string str_message = message.encode();
+    if (send(clientSocket, str_message.c_str(), str_message.size(), 0) < 0) {
+        std::cerr << "ERROR sending rankings to player " << player_id << std::endl;
+    }
+}
+
+// Initialize player data on maps so not to cause crashes, only in use fo playerReady as of now, but may be expanded
+void Server::initPlayerData(int player_id) {
+    std::lock_guard<std::mutex> lck(playerReadyMutex);
+    playerReady.insert({player_id, false});
+}
+
+
+// Thread safely stores player finish timestamp
+void Server::storePlayerDone(int player_id, int timestamp) {
+    std::lock_guard<std::mutex> lck(completionTimesMutex);
+    completionTimes.insert({player_id, timestamp});
+    finishedPlayers++;
+}
+
+
+// Thread safely stores ready status
+void Server::storePlayerReady(int player_id){
+    std::lock_guard<std::mutex> lck(playerReadyMutex);
+    playerReady[player_id] = true;
+}
+
+// Handle a single player (to be substituted)
 void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
     char buffer[1024];
 
@@ -129,6 +266,7 @@ void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
 
         if (bytesReceived <= 0) {
             std::cout << "Player " << playerId << " disconnected." << std::endl;
+            playerCount--;
             close(clientSocket);
             return;
         }
@@ -142,7 +280,7 @@ void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
         updateRanking(message.data.name, message.data.score, message.data.timestamp);
 
         // Send response to player
-        ServerMessage response(rankings.size(), rankings);
+        ServerMessage response;
         std::string encodedresponse = response.encode();
         if (send(senderSocket, encodedresponse.c_str(), encodedresponse.size(), 0) < 0) {
             std::cerr << "Error sending response to client.\n";
@@ -154,6 +292,19 @@ void Server::handlePlayer(int clientSocket, int playerId, sockaddr_in addr) {
     close(clientSocket);
 }
 
+
+void Server::sendPhrase() {
+    for (auto player_conn : playerConections) {
+        std::string message =  ServerMessage(playerCount, ServerMessage::ServerMessageType::PHRASE).encode();
+        if(send(player_conn.second.second, message.c_str(), message.size(), 0) < 0)
+            std::cerr << "Error sending phrase to client.\n";
+        else
+            std::cout << "Phrase sent to " << player_conn.first << std::endl;
+    }
+
+}
+
+// this doesnt look efficient, should be changed, but if it works... 
 // Update rankings thread-safely
 void Server::updateRanking(std::string playerName, int score, int timestamp) {
     std::lock_guard<std::mutex> lock(rankingsMutex);
