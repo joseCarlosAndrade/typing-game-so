@@ -6,7 +6,17 @@ Client::~Client() {
     {
         std::unique_lock<std::mutex> lock(queueMutex);
         stopSender = true;
-    }
+    }   
+
+    std::cout << "stopping sockets" << std::endl;
+
+    close(senderSocket);
+    shutdown(senderSocket, SHUT_RDWR);
+    close(receivingSocket);
+    shutdown(receivingSocket, SHUT_RDWR);
+
+    std::cout << "sockets off" << std::endl;
+
     queueCV.notify_all();
     if (senderThread.joinable()) {
         senderThread.join();
@@ -17,7 +27,37 @@ Client::~Client() {
         receiverThread.join();
     }
 
+    std::cout << "threads off" << std::endl;
+}
+
+void Client::clean() {
+    {
+        std::unique_lock<std::mutex> lock(queueMutex);
+        stopSender = true;
+    }   
+
+    std::cout << "[CLEAN] stopping sockets" << std::endl;
+
     close(senderSocket);
+    shutdown(senderSocket, SHUT_RDWR);
+    close(receivingSocket);
+    shutdown(receivingSocket, SHUT_RDWR);
+
+    std::cout << "[CLEAN] sockets off" << std::endl;
+
+    queueCV.notify_all();
+    if (senderThread.joinable()) {
+        senderThread.join();
+    }
+
+    std::cout << "[CLEAN] sender stopped. waiting for receiver" << std::endl;
+
+    if (receiverThread.joinable()) {
+        stopReceiver = true;
+        receiverThread.join();
+    }
+
+    std::cout << "[CLEAN] threads off" << std::endl;
 }
 
 int Client::connectToServer() {
@@ -78,6 +118,22 @@ void Client::receiveUpdates() {
     recv_addr.sin_port = htons(receivePORT);
     recv_addr.sin_addr.s_addr = INADDR_ANY;
 
+    int opt = 1;
+    if (setsockopt(receivingSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        perror("setsockopt");
+        close(receivingSocket);
+        exit(EXIT_FAILURE);
+    }
+
+    struct timeval timeout;
+    timeout.tv_sec = 1; // 1 seconds
+    timeout.tv_usec = 0; // 0 microseconds
+    if (setsockopt(receivingSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("setsockopt failed");
+        close(receivingSocket);
+        exit(EXIT_FAILURE);
+    }
+
     if(bind(receivingSocket, (sockaddr *)&recv_addr, (socklen_t)sizeof(recv_addr)) < 0){
         perror("ERROR on binding");
         return;
@@ -102,12 +158,14 @@ void Client::receiveUpdates() {
     while(!stopReceiver){
         char buffer[1024];
         
-        std::cout << "waiting for message..\n";
+        std::cout << "[RECEIVER] waiting for message..\n";
         int bytesReceived = recv(recvSocket, buffer, sizeof(buffer) - 1, 0);
-        std::cout << "..message received\n";
+        std::cout << "[RECEIVER] ..message received\n";
 
         if (bytesReceived <= 0){
             std::cout << "Lost connection to server" << std::endl;
+            // break;
+            continue;
         }
 
         ServerMessage message = ServerMessage::decode(std::string(buffer));
@@ -167,6 +225,7 @@ void Client::receiveUpdates() {
                 break;
 
             default:
+                std::cout <<"[RECEIVER] invalid message type received" << std::endl;
                 break;
         }
         

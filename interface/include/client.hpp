@@ -58,6 +58,8 @@ public:
     void sendPosition();
     void receiveUpdates();
 
+    void clean();
+
     Interface interface;
 };
 

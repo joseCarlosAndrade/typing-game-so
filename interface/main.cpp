@@ -29,7 +29,10 @@ int main(int argc, char *argv[]) {
         client.interface.render();
     }
 
+    std::cout << "Exiting..." << std::endl;
+
     client.interface.clean();
+    client.clean();
     
 
     return 0;
