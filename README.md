@@ -2,6 +2,9 @@
 
 Realizado por:
 -Felipe Carneiro Machado - 14569373
+-José Carlos Andrade do Nascimento - 12549450
+-Shogo Shima - 12675145
+-Thiago Zero Araujo - 11814183
 
 Este projeto é o trabalho final da disciplina de Sistemas Operacionais, ICMC-USP, onde implementamos um jogo de digitação competitivo, onde múltiplos jogadores tentam digitar rapidamente uma frase, acompanhando em tempo real o seu progresso e o de outros jogadores. Este projeto tem como objetivo implementar conceitos de programação concurrente, como threads e semáforos.
 
