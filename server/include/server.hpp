@@ -35,14 +35,13 @@ private:
     std::mutex rankingsMutex;              // Mutex to protect rankings
 
     std::mutex gameStateMutex;
-    std::condition_variable gameStateCV; // Blocks treads in game states when its needed
     std::condition_variable messageSendingCV; // CV to avoid deadlocks in message sending
 
     // End game management
     std::map<int, int> completionTimes; // {id, last timestamps}
-    std::mutex completionTimesMutex;
-    int finishedPlayers = 0;
-    std::condition_variable completionCV;
+    std::mutex completionTimesMutex; // Mutex to store completuon times
+    int finishedPlayers = 0; // How many players have ended
+    std::condition_variable completionCV; 
 
     std::map<int, std::pair<int, int>> playerConections; //PlayerID -> player socket{receiver, sender}
 
@@ -73,8 +72,8 @@ public:
     void readCommands();
     void start();                        // Start the server
     void stop();                         // Stop the server
-    void setGameState(STATES state);
-    void sendPhrase();
+    void setGameState(STATES state);  
+    void sendPhrase();              // Sends the phrase to all connected players
     std::atomic<bool> isRunning; // Flag to indicate if the server is running
 
 };

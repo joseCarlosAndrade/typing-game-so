@@ -1,8 +1,10 @@
 #include "protocol.hpp"
 
+// Enconding conventions
 std::string ServerMessage::encode() {
     std::ostringstream oss;
     oss << int(type) << " ";
+    // Each type has its format
     switch (type) {
     case ServerMessageType::START :
         oss << playerCount;
@@ -35,6 +37,8 @@ std::string ServerMessage::encode() {
     return oss.str();
 }
 
+
+// Deconding conventions
 ServerMessage ServerMessage::decode(const std::string &data) {
     std::istringstream iss(data);
     ServerMessageType in_type;
@@ -44,7 +48,7 @@ ServerMessage ServerMessage::decode(const std::string &data) {
     in_type = ServerMessageType(temp1);
     ServerMessage message;
     message.type = in_type;
-
+    // Each type has its format
     switch (in_type) {
     case ServerMessageType::START :
         iss >> message.playerCount;
@@ -85,6 +89,7 @@ ServerMessage ServerMessage::decode(const std::string &data) {
 std::string ClientMessage::encode() {
     std::ostringstream oss;
     oss << int(type) << " ";
+    // Each type has its format
     switch (type)
     {
     case ClientMessageType::READY :
@@ -116,7 +121,8 @@ ClientMessage ClientMessage::decode(const std::string &data) {
     iss >> temp1;
     in_type = ClientMessageType(temp1);
     ClientMessage message(in_type);
-     switch (in_type)
+    // Each type has its format
+    switch (in_type)
     {
     case ClientMessageType::READY :
         iss >> message.data.name;

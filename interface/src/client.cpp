@@ -2,17 +2,19 @@
 
 // #include <fcntl.h>
 
-
+// Constructor
 Client::Client(const std::string &ip, int portno) : serverIP(ip), senderPORT(portno), receivePORT(0) {}
 
+// Destructor, frees resources
 Client::~Client() {
+    // Stops the sending of messages
     {
         std::unique_lock<std::mutex> lock(queueMutex);
         stopSender = true;
     }   
 
     std::cout << "stopping sockets" << std::endl;
-
+    // Closes and stops
     close(senderSocket);
     shutdown(senderSocket, SHUT_RDWR);
     close(receivingSocket);
@@ -20,7 +22,11 @@ Client::~Client() {
 
     std::cout << "sockets off" << std::endl;
 
+    // Wakes up sending thread so it can terminate
     queueCV.notify_all();
+
+    // Joins threads
+
     if (senderThread.joinable()) {
         senderThread.join();
     }
@@ -33,6 +39,7 @@ Client::~Client() {
     std::cout << "threads off" << std::endl;
 }
 
+// Same proccess as destructor, but called directly
 void Client::clean() {
     {
         std::unique_lock<std::mutex> lock(queueMutex);
@@ -63,14 +70,16 @@ void Client::clean() {
     std::cout << "[CLEAN] threads off" << std::endl;
 }
 
+// Estabilishes connection to the server
 int Client::connectToServer() {
+
+    // Creates the socket that sends data to the server
+
     senderSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (senderSocket < 0) {
         perror("ERROR opening socket");
         return -1;
     }
-
-    
 
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
@@ -81,6 +90,7 @@ int Client::connectToServer() {
         return -1;
     }
 
+    // Connects to server
     if (connect(senderSocket, (sockaddr *)&serverAddr, sizeof(serverAddr)) < 0) {
         perror("ERROR connecting to server");
         return -1;
@@ -101,21 +111,32 @@ int Client::connectToServer() {
 
     std::cout << "Received port " << receivePORT << " from server" << std::endl;
 
+
+    /*
+        The client keeps 2 sockets, 1 to receive data from the server, and one to send data to the server
+    */
+
+    // Starts the thread to send data to the server
     senderThread = std::thread(&Client::processQueue, this);
 
+    // Starts the thread to receive data from the server
     receiverThread = std::thread(&Client::receiveUpdates, this, receivePORT);
 
     return 0;
 }
 
+// Adds data to sendQueue, thread safely
 void Client::sendData(std::string data) {
     {
+        // Gain control of mutex
         std::unique_lock<std::mutex> lock(queueMutex);
         sendQueue.push(data);
     }
+    // Wake up consumer thread
     queueCV.notify_one();
 }
 
+// Creates message to be sent, and adds to the queue, thread safely
 void Client::sendPosition(){
     ClientMessage message(interface.players[0].name, interface.keyboard->last_correct_index);
     std::string encodedMessage = message.encode();
@@ -123,9 +144,11 @@ void Client::sendPosition(){
 }
 
 
-// TODO : close sockets correctly, create a real system for the second port
+// Receive messages from the server
 void Client::receiveUpdates(int receivePort) {
     std::cout << "Receiving thread started" << std::endl;
+
+    // First section of the function stes the socket
 
     if (receivePort == 0) {
         std::cout << "ERROR: receive port not set" << std::endl;
@@ -144,6 +167,9 @@ void Client::receiveUpdates(int receivePort) {
     recv_addr.sin_port = htons(receivePort);
     recv_addr.sin_addr.s_addr = INADDR_ANY;
 
+    // Socket configuration
+
+    // Reuse port, useful for testing
     int opt = 1;
     if (setsockopt(receivingSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         perror("setsockopt");
@@ -151,6 +177,7 @@ void Client::receiveUpdates(int receivePort) {
         exit(EXIT_FAILURE);
     }
 
+    // Timeout, avoids locking threads indefintely
     struct timeval timeout;
     timeout.tv_sec = 1; // 1 seconds
     timeout.tv_usec = 0; // 0 microseconds
@@ -159,9 +186,6 @@ void Client::receiveUpdates(int receivePort) {
         close(receivingSocket);
         exit(EXIT_FAILURE);
     }
-
-    // int flags = fcntl(receivingSocket, F_GETFL, 0);
-    // fcntl(receivingSocket, F_SETFL, flags & ~O_NONBLOCK);
 
     if(bind(receivingSocket, (sockaddr *)&recv_addr, (socklen_t)sizeof(recv_addr)) < 0){
         perror("ERROR on binding");
@@ -184,7 +208,11 @@ void Client::receiveUpdates(int receivePort) {
     }
     std::cout << "Receiving connection estabilished" << std::endl;
 
+    // At this point the socket is configured and ready
+
+    // Receiving loop
     while(!stopReceiver){
+        // Stores incoming message
         char buffer[1024];
         memset(buffer, 0, sizeof(buffer));
         
@@ -192,19 +220,19 @@ void Client::receiveUpdates(int receivePort) {
         int bytesReceived = recv(recvSocket, buffer, sizeof(buffer) - 1, 0);
         std::cout << "[RECEIVER] ..message received\n";
 
+        // Client stopping logic
         if (bytesReceived <= 0){
-            // std::cout << "Lost connection to server" << std::endl;
-            // break;
             continue;
         }
-
+        //message decoding
         ServerMessage message = ServerMessage::decode(std::string(buffer));
 
         std::cout << "msg received\n";
         std::cout << "msg type: " << message.type << std::endl;
         
-        //std::cout << "a\n"; 
+        // Handles each type of message accordingly
         switch (message.type) {
+            // Sets the target phrase 
             case ServerMessage::ServerMessageType::PHRASE:
 
                 if (interface.phrase_recieved == true) break;
@@ -216,7 +244,7 @@ void Client::receiveUpdates(int receivePort) {
                 interface.phrase_recieved = true;
                 interface.setPhrase(message.phrase);
                 break;
-
+            // Starts the game
             case ServerMessage::ServerMessageType::START:
                 std::cout << "game started\n";
 
@@ -234,13 +262,9 @@ void Client::receiveUpdates(int receivePort) {
                 }
                 interface.game_started = true;
                 break;
-
+            // Updates ranking on the interface
             case ServerMessage::ServerMessageType::RANKING: {
                 int i = 1;
-                std::cout << "Rankings:" << std::endl;
-                for(auto data : message.rankings){
-                    std::cout << data.first << " " << data.second.first << " " << data.second.second << std::endl;
-                }
                 // receives a ranking list of the players
                 for(auto data : message.rankings){
 
@@ -265,7 +289,7 @@ void Client::receiveUpdates(int receivePort) {
                 }
                 break;
                 }
-
+            // Ends game and stops client
             case ServerMessage::ServerMessageType::END_GAME:
                 interface.ended_game = true;
                 break;
@@ -282,7 +306,7 @@ void Client::receiveUpdates(int receivePort) {
         rankLock.unlock();
         std::cout << "Score updated" << std::endl;
     }
-
+    // Closes resources
     std::cout << "Closing receiving socket" << std::endl;
     close(recvSocket);
     close(receivingSocket);

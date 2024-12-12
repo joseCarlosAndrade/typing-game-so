@@ -16,25 +16,20 @@ struct PlayerData {
           timestamp(timestamp) {}
 };
 
+// Message sent by the server to the client
 class ServerMessage {
 public:
+    // Types of message
     enum ServerMessageType {PHRASE =1, START, RANKING, END_GAME}; // 0, 1, 2, 3
 
-    int playerCount;
+    int playerCount; // Number of players connected
+    // Stores the rankings
     std::multimap<std::string, std::pair<int, int>> rankings; // {{score, timestamp}, name}
-    bool isRunning;
-    std::string phrase;
-    ServerMessageType type;
+    bool isRunning; // Running flag
+    std::string phrase; // Target phrase
+    ServerMessageType type; // Message type
 
-    // P causa do -Werror tinha uns warning estanho, ai p compilar eu tirei esse constructor q so usava uma vez tbm
-    // Constructor
-    // ServerMessage(int count, std::multimap<std::string, std::pair<int, int>> rankings, std::string phrase, ServerMessageType type)
-    //     : playerCount(count),
-    //       rankings(rankings),
-    //       isRunning(true),
-    //       phrase(phrase),
-    //       type(type) {}
-
+    // Constructors
     ServerMessage(int count, ServerMessageType type)
         : playerCount(count),
           rankings(),
@@ -53,6 +48,10 @@ public:
         rankings(),
         isRunning(true) {}
 
+
+    // Server messages are passed via socket as text strings, following encoding and deconding conventions
+
+
     // Encoding function
     std::string encode();
 
@@ -60,12 +59,15 @@ public:
     static ServerMessage decode(const std::string &data);
 };
 
+
+// Message sent by the client, to the server
 class ClientMessage {
 public:
+    // Types of messages
     enum ClientMessageType {READY, PROGRESS, DONE}; //0, 1 2
 
-    PlayerData data;
-    ClientMessageType type;
+    PlayerData data; // Info about the player
+    ClientMessageType type; // Message type
 
     // Constructor
     ClientMessage(std::string name, int sc, int ts = getCurrentTimestamp(), ClientMessageType type = ClientMessageType::PROGRESS)
@@ -73,6 +75,11 @@ public:
 
     ClientMessage(ClientMessageType type)
         : data("", 0, 0), type(type) {}
+
+        
+    // Client messages are passed via socket as text strings, following encoding and deconding conventions
+
+
 
     // Encoding function
     std::string encode();
