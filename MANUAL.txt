@@ -1,3 +1,3 @@
-Todas as instruções e informações requeridas pelas especificações do trabalho estão detalhadas no README.md deste repositório, assim como o nome e nusp dos autores.
+Todas as instruções e informações requeridas pelas especificações do trabalho estão detalhadas no README.md deste repositório, assim como o nome e nusp dos autores .
 O código do servidor está na pasta server, o código da interface está na pasta interface. A pasta protocol possui classes auxiliares.
-O vídeo está disponível no link:   
+O vídeo está disponível no link: https://youtu.be/IIqE18Nga_8?si=WHnCUfVgCnaN_kMX
