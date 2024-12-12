@@ -210,9 +210,13 @@ void Server::receivePlayerData(int clientSocket, int player_id) {
 void Server::sendPlayerData(int clientSocket, int player_id) {
     while (isRunning) {
         // Only state where messages are sent continuoslly
-        if (gameState == STATES::GAME_IN_PROGRESS)
+        if (gameState == STATES::GAME_IN_PROGRESS){
             // Sends the current ranking to player
-            sendRankings(clientSocket, player_id); 
+            sendRankings(clientSocket, player_id);
+            // Adds delay sot not to clog the system when multiple interfaces and server are all running on the same computer  
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+            
     }
     // Closes resources
     close(clientSocket);

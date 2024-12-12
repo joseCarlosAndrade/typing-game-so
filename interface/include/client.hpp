@@ -37,8 +37,8 @@ private:
     // Data to be sent is stored in a queue, in a classic producer-consumer fashion
     // This function, ran as a thread is responsible for managing the queue
     void processQueue() {
+        // Access the queue thread safely
         while (true) {
-            // Access the queue thread safely
             std::unique_lock<std::mutex> lock(queueMutex);
             // Sleeps if the queue is empty
             queueCV.wait(lock, [this]() { return !sendQueue.empty() || stopSender; });

@@ -141,6 +141,8 @@ void Client::sendPosition(){
     ClientMessage message(interface.players[0].name, interface.keyboard->last_correct_index);
     std::string encodedMessage = message.encode();
     sendData(encodedMessage);
+    // Adds delay sot not to clog the system when multiple interfaces and server are all running on the same computer 
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 
