@@ -1,6 +1,7 @@
 # Jogo de digitação competitivo - Projeto final de Sistemas operacionais
 
 Realizado por:
+
 -Felipe Carneiro Machado - 14569373
 -José Carlos Andrade do Nascimento - 12549450
 -Shogo Shima - 12675145
