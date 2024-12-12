@@ -1,36 +1,37 @@
-# Competitive Typing Game for Operational Systems Class  
+# Jogo de digitação competitivo - Projeto final de Sistemas operacionais
 
-This project is an multiplayer competitive typing game, developed as part of the Operational Systems course at the University of São Paulo. The objective of this game is to implement key concepts of concurrent programming, such as semaphores and threads, to manage the ranking of players in real time while the game progresses.  
+Realizado por:
+-Felipe Carneiro Machado - 14569373
 
-## Gameplay Overview  
+Este projeto é o trabalho final da disciplina de Sistemas Operacionais, ICMC-USP, onde implementamos um jogo de digitação competitivo, onde múltiplos jogadores tentam digitar rapidamente uma frase, acompanhando em tempo real o seu progresso e o de outros jogadores. Este projeto tem como objetivo implementar conceitos de programação concurrente, como threads e semáforos.
 
-Players compete by typing words or sentences as quickly and accurately as possible. Each player's performance is tracked and scored live. The game calculates the ranking dynamically, updating it as players type.  
 
-## Technical Implementation  
+## Gameplay   
 
-### Threads  
-- **Player Threads**: Each player has a dedicated thread handling their input and score calculation. This ensures simultaneous input processing for all players.  
-- **Game Manager Thread**: A central thread oversees the gameplay, aggregates scores, and updates the live rankings.  
+Jogadores buscam digitar uma frase de forma correta o mais rápido possível, podendo acompanhar sua pontuação e a dos outros jogadores em tempo real.
 
-### Semaphores  
-- **Synchronization**: Semaphores are used to coordinate access to shared resources, such as the score table and ranking list, ensuring data integrity.  
-- **Concurrency Control**: They manage critical sections of the program, preventing race conditions when multiple threads attempt to update shared resources.  
-- **Game Flow**: Semaphores enforce proper synchronization for game phases like starting the game, processing player input, and ending rounds.  
+## Detalhes de implementação  
 
-## Features  
-1. **Live Ranking**: A scoreboard updates dynamically to reflect players' performances in real time.  
-2. **Fairness**: Semaphore-controlled access ensures that the game's core operations are free from errors caused by concurrent updates.  
-3. **Scalability**: The use of threads allows the game to support a large number of players with minimal performance impact.  
+### Cliente
+-3 threads, 1 para renderização e game loop principal, 1 para enviar informação ao servidor e 1 para receber informações do servidor
+-1 semáforo no modelo produtor/consumidor: thread principal determina pontuação a ser enviada para o servidor, adiciona a uma fila (região crítica protegida por mutex), thread de envio ao servidor
+lê essa fila e envia, caso esteja vazia, thread dorme.
 
-This project not only demonstrates the practical use of semaphores and threads but also provides an engaging platform for learning and exploring concurrent programming principles.
+### Servidor
+-2 + 2 x num_jogadores threads, 1 para receber comandos via stdin, 1 para verficar se todos os jogadores já finalizaram, dormindo quando a condição é falsa, visando evitar 
+busy waiting, e 2 threads por client, 1 recebe informação e a outra envia.
+-Semáforo do estado do jogo: mutex utilizado pela primeira thread para alterar o estado do servidor, o qual é representado por valores de uma enum, e cuja mudança também implica em ações de envio de mensagens
+-Semáforo de finalização dos jogadores: mutex utilizado pelas threads de recebimento de mensagens e de verificação de finalização para alterar informações desse aspecto.
+-Semáforo do ranking: mutex para alterar e ler o ranking das pontuações dos jogadores, utilizado por todas as threads.
 
-## Running the game
 
-To run the game, you need to run the server first, and then you can run many clients as you want. The clients are the players who will compete in the typing game. Below are the steps to run both the server and the client.
+## Executando o jogo
 
-### Running the server
+Para rodar o jogo, é necessãrio executar primmeiro o servidor, e depois, quantos clientes desejar. Os clientes são os jogadores que vão digitar e competir. Segue abaixo o passo a passo.
 
-To run the server, simply go to the server directory and use make:
+### Executando o servidor
+
+Para executar o servidor, digite em seu terminal (estando na pasta deste projeto):
 
 ```bash
 cd server
@@ -41,11 +42,14 @@ make all
 make run
 ```
 
-### Running the interface 
+Após iniciá-lo e havendo interfaces conectadas, pelo terminal envie os comandos "phrase" para enviar a frase para os clientes, e "start" para iniciar o jogo.
 
-Install SDL2 in your computer. I'm using `#include<SDL2/SDL.h>`, so if you have a linux you're probably ok. If not, let me know so we can configure OS specific import. If you use windows os, I don't care about you.
+### Executando a interface 
 
-Dependencies:
+É necessário instalar a SDL2 na sua máquina. O código utiliza `#include<SDL2/SDL.h>`, o que é compatível com sistemas linux, e provavelmente MacOS, porém provavelmente levará a erros em sistemas windows.
+
+
+Dependências (outros package managers também possuem essas bibliotecas, busque na documentação deles pelo pacote correto caso seja necessário):
 
 ```bash
 sudo apt-get install libsdl2-dev
@@ -53,7 +57,7 @@ sudo apt-get install libsdl2-2.0
 sudo apt install libsdl2-ttf-dev
 ```
 
-To run, go to the interface directory and use make:
+Para executar, entre na pasta deste repositório e execute:
 
 ```bash
 cd interface
@@ -64,4 +68,4 @@ make all
 make run NAME=your_name
 ```
 
-And you should be able to see a little window popping up!
+A janela se abrirá e aguardará intruções do servidor.
